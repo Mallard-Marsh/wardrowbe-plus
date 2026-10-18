@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useSetTokenIfAvailable, applySessionToken } from '@/lib/hooks/use-session-token';
 import { getTodayDateStringInTimezone, resolveTimezone } from '@/lib/utils';
 import { queryKeys } from '@/lib/hooks/query-keys';
-import { readLocaleCookie } from '@/lib/i18n/locales';
+import { DEFAULT_LOCALE, isValidLocale, readLocaleCookie, writeLocaleCookie } from '@/lib/i18n/locales';
 
 export interface UserProfile {
   id: string;
@@ -74,14 +75,19 @@ export function useUpdateUserProfile({ toastsOwnErrors = false } = {}) {
   });
 }
 
-// The UI language comes from the NEXT_LOCALE cookie or Accept-Language, never from the profile,
-// so the profile follows the UI: the tagging worker writes AI descriptions in profile.locale.
+// The UI language comes from the NEXT_LOCALE cookie or Accept-Language, and the profile follows
+// the UI: the tagging worker writes AI descriptions in profile.locale. The one exception is a
+// device that has never picked a language while the profile holds a non-default one: that profile
+// language was chosen on another device, so this device adopts it (cookie + refresh) instead of
+// overwriting it with its Accept-Language. A default profile still follows the UI, because "en"
+// is indistinguishable from never having chosen.
 // One attempt per locale because a failed save must not repeat on every profile refetch; the
 // next page load tries again. A tab whose locale no longer matches the cookie was switched away
 // from in another tab, so it must not write its stale language back.
 export function useSyncProfileLocale(uiLocale: string) {
   const { data: profile } = useUserProfile();
   const { mutate } = useUpdateUserProfile({ toastsOwnErrors: true });
+  const router = useRouter();
   const attempted = useRef<string | null>(null);
 
   useEffect(() => {
@@ -89,6 +95,11 @@ export function useSyncProfileLocale(uiLocale: string) {
     const cookieLocale = readLocaleCookie();
     if (cookieLocale && cookieLocale !== uiLocale) return;
     attempted.current = uiLocale;
+    if (!cookieLocale && profile.locale !== DEFAULT_LOCALE && isValidLocale(profile.locale)) {
+      writeLocaleCookie(profile.locale);
+      router.refresh();
+      return;
+    }
     mutate({ locale: uiLocale });
-  }, [profile, uiLocale, mutate]);
+  }, [profile, uiLocale, mutate, router]);
 }

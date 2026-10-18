@@ -21,6 +21,20 @@ vi.mock("next-intl", () => ({
   useLocale: () => session.locale,
 }));
 
+const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => router,
+}));
+
+function localeCookie() {
+  return document.cookie
+    .split("; ")
+    .filter((part) => part.startsWith("NEXT_LOCALE="))
+    .pop()
+    ?.slice("NEXT_LOCALE=".length);
+}
+
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),
   api: { get: vi.fn(), patch: vi.fn() },
@@ -43,6 +57,7 @@ describe("ProfileLocaleSync", () => {
   beforeEach(() => {
     vi.mocked(api.get).mockReset();
     vi.mocked(api.patch).mockReset();
+    router.refresh.mockReset();
     session.status = "authenticated";
     session.locale = "fr";
     session.token = "jwt";
@@ -138,5 +153,38 @@ describe("ProfileLocaleSync", () => {
     );
 
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/users/me", { locale: "de" }));
+  });
+
+  it("adopts the account language on a device that never picked one", async () => {
+    session.locale = "en";
+    vi.mocked(api.get).mockResolvedValue({ locale: "de" });
+
+    renderSync();
+
+    await waitFor(() => expect(router.refresh).toHaveBeenCalledTimes(1));
+    expect(localeCookie()).toBe("de");
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it("lets a language picked on this device win over the account's", async () => {
+    document.cookie = "NEXT_LOCALE=en; path=/";
+    session.locale = "en";
+    vi.mocked(api.get).mockResolvedValue({ locale: "de" });
+    vi.mocked(api.patch).mockResolvedValue({ locale: "en" });
+
+    renderSync();
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/users/me", { locale: "en" }));
+    expect(router.refresh).not.toHaveBeenCalled();
+  });
+
+  it("saves the UI language over an account language this build does not support", async () => {
+    vi.mocked(api.get).mockResolvedValue({ locale: "pt-BR" });
+    vi.mocked(api.patch).mockResolvedValue({ locale: "fr" });
+
+    renderSync();
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/users/me", { locale: "fr" }));
+    expect(router.refresh).not.toHaveBeenCalled();
   });
 });

@@ -12,10 +12,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  LOCALE_COOKIE,
-  LOCALE_COOKIE_MAX_AGE,
   LOCALE_METADATA,
   SUPPORTED_LOCALES,
+  writeLocaleCookie,
   type SupportedLocale,
 } from '@/lib/i18n/locales';
 
@@ -30,7 +29,7 @@ export function LocaleSwitcher() {
 
     // The cookie is what the server reads on the next render, so it must be set before the
     // refresh. ProfileLocaleSync saves the new language to the profile once it renders.
-    document.cookie = `${LOCALE_COOKIE}=${nextLocale};path=/;max-age=${LOCALE_COOKIE_MAX_AGE};SameSite=Lax`;
+    writeLocaleCookie(nextLocale);
 
     startTransition(() => {
       router.refresh();
