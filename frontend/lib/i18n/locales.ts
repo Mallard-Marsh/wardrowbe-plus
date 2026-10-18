@@ -49,6 +49,11 @@ export function isValidLocale(locale: string | undefined | null): locale is Supp
   return !!locale && (SUPPORTED_LOCALES as readonly string[]).includes(locale);
 }
 
+// The cookie is what the server reads on the next render, so callers set it before refreshing.
+export function writeLocaleCookie(locale: SupportedLocale): void {
+  document.cookie = `${LOCALE_COOKIE}=${locale};path=/;max-age=${LOCALE_COOKIE_MAX_AGE};SameSite=Lax`;
+}
+
 // The last NEXT_LOCALE wins because that is the one the server's cookie parser keeps.
 export function readLocaleCookie(): SupportedLocale | undefined {
   const prefix = `${LOCALE_COOKIE}=`;
