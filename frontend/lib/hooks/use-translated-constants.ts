@@ -63,21 +63,24 @@ type CatalogTranslator = ((key: string) => string) & { has: (key: string) => boo
 // tagged before the vocabulary changed), so an unknown value falls back to the raw value made
 // readable ("slip-dress" -> "Slip dress") instead of a key path. Keys are hyphenated because the
 // backend sends some values with spaces ("partly cloudy"); this matches the cloud repo's termKey.
-function useCatalogLabel(t: CatalogTranslator) {
+function useCatalogLabel(t: CatalogTranslator, fallback?: CatalogTranslator) {
   return useCallback((value: string) => {
     const key = value.trim().toLowerCase().replace(/\s+/g, '-');
     if (t.has(key)) return t(key);
+    if (fallback?.has(key)) return fallback(key);
     const spaced = value.replace(/[-_\s]+/g, ' ').trim();
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-  }, [t]);
+  }, [t, fallback]);
 }
 
 export function useTypeLabel() {
   return useCatalogLabel(useTranslations('constants.types'));
 }
 
+// Items tagged before the tagger promoted type names out of the subtype ("shoes" >
+// "sneakers") still hold a type as their subtype; label it as that type so it is translated.
 export function useSubtypeLabel() {
-  return useCatalogLabel(useTranslations('constants.subtypes'));
+  return useCatalogLabel(useTranslations('constants.subtypes'), useTranslations('constants.types'));
 }
 
 export function useMaterialLabel() {

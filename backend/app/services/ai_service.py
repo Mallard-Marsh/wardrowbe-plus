@@ -16,6 +16,7 @@ from app.config import get_settings
 from app.utils.garment_vocabulary import (
     COLORS,
     FORMALITY,
+    ITEM_ROLE,
     MATERIALS,
     TYPES,
     normalize_color,
@@ -124,6 +125,27 @@ VALID_STYLES = {
     "rugged",
 }
 VALID_SEASONS = {"spring", "summer", "fall", "winter", "all-season"}
+
+
+def promote_type_subtype(item_type: str, subtype: object) -> tuple[str, object]:
+    """Move a subtype that names a clothing type up into the type.
+
+    The model sometimes files a garment under a broad type and gives a more specific
+    *type* as the subtype ("shoes" > "sneakers", "pants" > "jeans"). Left alone, the item
+    shows the raw subtype instead of a translated type label and misses that type's
+    subtype suggestions and wash interval. Promotion stays within one outfit role, so a
+    shirt never turns into a dress just because "dress" also names a shirt subtype.
+    """
+    if not isinstance(subtype, str):
+        return item_type, subtype
+    key = subtype.strip().lower().replace(" ", "-")
+    if key == item_type:
+        return item_type, None
+    if key in VALID_TYPES and (
+        item_type == "unknown" or ITEM_ROLE.get(key) == ITEM_ROLE.get(item_type)
+    ):
+        return key, None
+    return item_type, subtype
 
 
 def compute_tag_completeness(tags: "ClothingTags") -> float:
@@ -427,6 +449,7 @@ class AIService:
                 logger.warning(f"AI returned unsupported item type: {tags.unrecognized_type!r}")
 
         tags.subtype = data.get("subtype") if data.get("subtype") else None
+        tags.type, tags.subtype = promote_type_subtype(tags.type, tags.subtype)
         raw_primary_color = data.get("primary_color")
         if isinstance(raw_primary_color, str):
             tags.primary_color = normalize_color(raw_primary_color)
