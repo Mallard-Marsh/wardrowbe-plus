@@ -36,4 +36,12 @@ describe('useSubtypeLabel', () => {
     expect(result.current('culottes')).toBe('Culottes')
     expect(result.current('fishnet-tights')).toBe('Fishnet tights')
   })
+
+  it('labels a type name stored as a subtype with the translated type', () => {
+    const { result } = renderHook(() => useSubtypeLabel(), { wrapper: wrapperFor('de') })
+    const types = JSON.parse(
+      readFileSync(resolve(__dirname, '..', 'messages', 'de', 'constants.json'), 'utf8'),
+    ).types
+    expect(result.current('sneakers')).toBe(types.sneakers)
+  })
 })

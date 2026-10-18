@@ -8,6 +8,7 @@ from app.services.ai_service import (
     AIResponseTruncatedError,
     AIService,
     ClothingTags,
+    promote_type_subtype,
 )
 from app.utils.locale import SUPPORTED_LOCALES
 
@@ -974,3 +975,38 @@ class TestReasoningEffort:
                 await service.generate_text("suggest an outfit")
 
         assert mock_post.call_count == 1
+
+
+class TestSubtypePromotion:
+    @pytest.mark.parametrize(
+        ("item_type", "subtype", "expected"),
+        [
+            ("shoes", "sneakers", ("sneakers", None)),
+            ("shoes", "Sneakers", ("sneakers", None)),
+            ("pants", "jeans", ("jeans", None)),
+            ("top", "t shirt", ("t-shirt", None)),
+            ("unknown", "sneakers", ("sneakers", None)),
+            ("jeans", "jeans", ("jeans", None)),
+        ],
+    )
+    def test_type_named_subtype_is_promoted(self, item_type, subtype, expected):
+        assert promote_type_subtype(item_type, subtype) == expected
+
+    @pytest.mark.parametrize(
+        ("item_type", "subtype"),
+        [
+            ("shirt", "oxford"),
+            ("shirt", "dress"),
+            ("shoes", "loafers"),
+            ("shoes", None),
+        ],
+    )
+    def test_real_subtypes_and_other_roles_are_kept(self, item_type, subtype):
+        assert promote_type_subtype(item_type, subtype) == (item_type, subtype)
+
+    def test_parser_promotes_sneakers_filed_under_shoes(self):
+        tags = AIService()._parse_tags_from_response(
+            '{"type": "shoes", "subtype": "sneakers", "primary_color": "olive"}'
+        )
+        assert tags.type == "sneakers"
+        assert tags.subtype is None
