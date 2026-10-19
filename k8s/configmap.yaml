@@ -35,6 +35,9 @@ data:
   # AI_TIMEOUT defaults to 120 seconds; slow local models often need 300-600.
   # AI_TIMEOUT: "300"
   AI_MAX_RETRIES: "3"
+  # The photo the vision model sees is shrunk to this many pixels on its long edge (256-2048).
+  # Raise it, e.g. to "1024", so fine patterns and small colours are not missed.
+  # AI_IMAGE_MAX_SIZE: "512"
   # Reasoning effort for thinking-capable models. "none" because a thinking model
   # otherwise spends the whole completion budget on hidden monologue and returns
   # empty content. Leave blank to send no reasoning_effort at all.

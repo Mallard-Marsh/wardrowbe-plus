@@ -99,6 +99,10 @@ class Settings(BaseSettings):
     ai_timeout: int = Field(default=120)
     ai_max_retries: int = Field(default=3)
     ai_max_tokens: int = Field(default=8000)
+    # The photo the vision model sees is shrunk to this many pixels on its long
+    # edge (never enlarged) and re-encoded as JPEG at this quality.
+    ai_image_max_size: int = Field(default=512, ge=256, le=2048)
+    ai_image_quality: int = Field(default=85, ge=1, le=100)
     ai_reasoning_effort: str | None = Field(default="none")
 
     @field_validator("ai_reasoning_effort", mode="before")
