@@ -150,6 +150,7 @@
   "itemCount": "{count, plural, one {# Stück in deinem Kleiderschrank} other {# Stücke in deinem Kleiderschrank}}",
   "itemDetail": {
     "actions": {
+      "backgroundRemovalStarted": "Hintergrund wird entfernt…",
       "backgroundRemoveError": "Hintergrund konnte nicht entfernt werden",
       "backgroundRemoved": "Hintergrund entfernt",
       "cancelEditing": "Bearbeitung abbrechen",
