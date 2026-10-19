@@ -5,14 +5,22 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.models.item import ClothingItem, ItemStatus
+from app.services import background_removal
 from app.services.image_service import ImageService
 from app.workers.db import get_db_session
 
 logger = logging.getLogger(__name__)
 
+# Jobs currently inside remove_item_background_job. The worker runs its jobs on
+# one event loop, so a plain counter is safe; the model is released only after
+# the last overlapping job finishes (IMAGE_WORKER_CONCURRENCY can be above 1).
+_active_jobs = 0
+
 
 async def remove_item_background_job(ctx: dict, item_id: str, bg_color_hex: str) -> dict:
+    global _active_jobs
     """Remove the background for one item and composite it onto bg_color_hex.
 
     Deterministic local image op (no external AI call), so no retry/cooldown
@@ -23,6 +31,7 @@ async def remove_item_background_job(ctx: dict, item_id: str, bg_color_hex: str)
     bg_color = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
     db = get_db_session(ctx)
+    _active_jobs += 1
     try:
         result = await db.execute(select(ClothingItem).where(ClothingItem.id == UUID(item_id)))
         item = result.scalar_one_or_none()
@@ -55,4 +64,7 @@ async def remove_item_background_job(ctx: dict, item_id: str, bg_color_hex: str)
             await db.commit()
             return {"status": "error", "error": str(e)}
     finally:
+        _active_jobs -= 1
+        if _active_jobs == 0 and get_settings().bg_removal_release_model:
+            background_removal.release()
         await db.close()

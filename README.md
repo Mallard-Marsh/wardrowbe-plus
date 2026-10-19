@@ -323,6 +323,7 @@ Upgrading from a release before sign-in identities (the `user_identities` table)
 | `BG_REMOVAL_MODEL` | rembg model name (default: `u2net`) | No |
 | `BG_REMOVAL_URL` | URL for HTTP bg removal provider | If http |
 | `BG_REMOVAL_API_KEY` | API key for HTTP bg removal provider | No |
+| `BG_REMOVAL_RELEASE_MODEL` | Free the rembg model when the image worker is idle, at the cost of a few seconds' reload per photo (default: `false`) | No |
 | `NEXT_PUBLIC_ENABLE_IP_LOCATION_FALLBACK` | Enable IP-based approximate location when browser geolocation is denied/unavailable. Off by default (sends the user's IP to a third party). Set to `true` to enable | No |
 | `NEXT_PUBLIC_NETWORK_LOCATION_URL` | Override the IP geolocation provider (default: `https://ipapi.co/json/`). Only used when the fallback above is enabled | No |
 | `PUID` | Uid the app process runs as (default: 1000 backend/worker, 1001 frontend) | No |

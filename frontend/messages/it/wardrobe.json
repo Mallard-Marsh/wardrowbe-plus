@@ -150,6 +150,7 @@
   "itemCount": "{count, plural, one {# capo nel tuo guardaroba} other {# capi nel tuo guardaroba}}",
   "itemDetail": {
     "actions": {
+      "backgroundRemovalStarted": "Rimozione dello sfondo in corso…",
       "backgroundRemoveError": "Rimozione sfondo fallita",
       "backgroundRemoved": "Sfondo rimosso",
       "cancelEditing": "Annulla modifica",
