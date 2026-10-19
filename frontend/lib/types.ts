@@ -16,9 +16,6 @@ export interface ItemTags {
   size?: string;
   care_instructions?: string;
   source_url?: string;
-  // Tag keys the user has edited by hand. C2 uses this to preserve manual edits
-  // during a "re-analyse and replace".
-  user_edited_keys?: string[];
 }
 
 export interface Item {
