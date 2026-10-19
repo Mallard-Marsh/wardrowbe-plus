@@ -345,13 +345,13 @@ class AIService:
             # Auto-orient based on EXIF
             img = ImageOps.exif_transpose(img)
 
-            # Resize to max 512x512 for faster AI processing
-            max_size = 512
+            # Shrink for faster, cheaper AI calls; thumbnail() never enlarges
+            max_size = self.settings.ai_image_max_size
             img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
 
             # Convert to JPEG bytes
             buffer = io.BytesIO()
-            img.save(buffer, format="JPEG", quality=85)
+            img.save(buffer, format="JPEG", quality=self.settings.ai_image_quality)
             buffer.seek(0)
 
             return base64.b64encode(buffer.read()).decode("utf-8")

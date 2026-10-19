@@ -1,8 +1,14 @@
+import base64
+import io
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
+from PIL import Image
+from pydantic import ValidationError
 
+from app.config import Settings
 from app.services.ai_service import (
     DESCRIPTION_LANGUAGES,
     AIResponseTruncatedError,
@@ -973,3 +979,60 @@ class TestReasoningEffort:
                 await service.generate_text("suggest an outfit")
 
         assert mock_post.call_count == 1
+
+
+class TestPreprocessImage:
+    """The photo sent to the vision model is sized by AI_IMAGE_MAX_SIZE / AI_IMAGE_QUALITY."""
+
+    @staticmethod
+    def _service(max_size: int = 512, quality: int = 85) -> AIService:
+        service = AIService()
+        service.settings = SimpleNamespace(ai_image_max_size=max_size, ai_image_quality=quality)
+        return service
+
+    @staticmethod
+    def _photo(tmp_path, size=(2000, 1000), noisy=False):
+        path = tmp_path / "photo.jpg"
+        image = Image.effect_noise(size, 80).convert("RGB") if noisy else Image.new("RGB", size)
+        image.save(path, format="JPEG", quality=95)
+        return path
+
+    @staticmethod
+    def _decode(encoded: str) -> Image.Image:
+        return Image.open(io.BytesIO(base64.b64decode(encoded)))
+
+    def test_default_keeps_the_512_long_edge(self, tmp_path):
+        result = self._service()._preprocess_image(self._photo(tmp_path))
+        assert self._decode(result).size == (512, 256)
+
+    def test_larger_setting_gives_the_model_more_pixels(self, tmp_path):
+        result = self._service(max_size=1024)._preprocess_image(self._photo(tmp_path))
+        assert self._decode(result).size == (1024, 512)
+
+    def test_never_enlarges_a_small_photo(self, tmp_path):
+        photo = self._photo(tmp_path, size=(300, 200))
+        result = self._service(max_size=1024)._preprocess_image(photo)
+        assert self._decode(result).size == (300, 200)
+
+    def test_quality_changes_the_encoded_size(self, tmp_path):
+        photo = self._photo(tmp_path, size=(600, 600), noisy=True)
+        low = self._service(quality=30)._preprocess_image(photo)
+        high = self._service(quality=95)._preprocess_image(photo)
+        assert len(low) < len(high)
+
+    def test_uses_the_real_defaults_from_settings(self):
+        settings = Settings()
+        assert (settings.ai_image_max_size, settings.ai_image_quality) == (512, 85)
+
+    @pytest.mark.parametrize(
+        "overrides",
+        [
+            {"ai_image_max_size": 255},
+            {"ai_image_max_size": 2049},
+            {"ai_image_quality": 0},
+            {"ai_image_quality": 101},
+        ],
+    )
+    def test_settings_reject_out_of_range_values(self, overrides):
+        with pytest.raises(ValidationError):
+            Settings(**overrides)
