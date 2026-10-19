@@ -58,6 +58,18 @@ from app.schemas.item import (
     TaggingProgressResponse,
     WashHistoryResponse,
 )
+from app.utils.garment_vocabulary import (
+    COLORS,
+    COLOR_ALIASES,
+    FORMALITY,
+    FITS,
+    MATERIALS,
+    PATTERNS,
+    SEASONS,
+    STYLES,
+    TYPES,
+    normalize_color,
+)
 from app.services.image_service import ImageService
 from app.services.item_service import ItemService
 from app.utils.auth import get_current_user
@@ -1290,6 +1302,14 @@ async def update_item(
         )
 
     update_data = item_data.model_dump(exclude_unset=True)
+
+    # Validate any tag values being changed against the vocabulary. Older items
+    # holding off-list values are untouched - only keys present in this update
+    # are checked, so a partial update never fails on a legacy value.
+    tags_incoming = update_data.get("tags")
+    if tags_incoming is not None:
+        _validate_tag_values(tags_incoming)
+
     if any(_has_tag_content(f, update_data.get(f)) for f in TAG_WRITEBACK_FIELDS):
         item.tagging_status = TaggingStatus.tagged
         item.tagged_by = TaggedBy.manual
@@ -1297,6 +1317,68 @@ async def update_item(
 
     item = await item_service.update(item, item_data)
     return ItemResponse.model_validate(item)
+
+
+def _validate_tag_values(tags: dict) -> None:
+    """Reject unknown tag values (422) for keys being changed in this update."""
+    errors: list[str] = []
+
+    pattern = tags.get("pattern")
+    if pattern is not None:
+        normalized = str(pattern).strip().lower()
+        if normalized not in PATTERNS:
+            errors.append(f"pattern: {pattern!r} is not a valid pattern")
+
+    material = tags.get("material")
+    if material is not None:
+        normalized = str(material).strip().lower()
+        if normalized not in MATERIALS:
+            errors.append(f"material: {material!r} is not a valid material")
+
+    formality = tags.get("formality")
+    if formality is not None:
+        normalized = str(formality).strip().lower()
+        if normalized not in FORMALITY:
+            errors.append(f"formality: {formality!r} is not a valid formality")
+
+    fit = tags.get("fit")
+    if fit is not None:
+        normalized = str(fit).strip().lower()
+        if normalized not in FITS:
+            errors.append(f"fit: {fit!r} is not a valid fit")
+
+    colors = tags.get("colors")
+    if colors is not None:
+        for c in colors:
+            normalized = normalize_color(c)
+            if normalized not in COLORS:
+                errors.append(f"color: {c!r} is not a valid color")
+
+    style = tags.get("style")
+    if style is not None:
+        for s in style:
+            normalized = str(s).strip().lower()
+            if normalized not in STYLES:
+                errors.append(f"style: {s!r} is not a valid style")
+
+    season = tags.get("season")
+    if season is not None:
+        for s in season:
+            normalized = str(s).strip().lower()
+            if normalized not in SEASONS:
+                errors.append(f"season: {s!r} is not a valid season")
+
+    primary_color = tags.get("primary_color")
+    if primary_color is not None:
+        normalized = normalize_color(primary_color)
+        if normalized not in COLORS:
+            errors.append(f"primary_color: {primary_color!r} is not a valid color")
+
+    if errors:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="; ".join(errors),
+        )
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
