@@ -15,9 +15,13 @@ from pydantic import BaseModel
 from app.config import get_settings
 from app.utils.garment_vocabulary import (
     COLORS,
+    FITS,
     FORMALITY,
     ITEM_ROLE,
     MATERIALS,
+    PATTERNS,
+    SEASONS,
+    STYLES,
     TYPES,
     normalize_color,
     render_tagging_prompt,
@@ -96,36 +100,12 @@ DESCRIPTION_QUOTES = (('"', '"'), ("“", "”"), ("「", "」"), ("『", "』")
 # Valid values for validation
 VALID_TYPES = set(TYPES)
 VALID_COLORS = set(COLORS)
-VALID_PATTERNS = {
-    "solid",
-    "striped",
-    "plaid",
-    "checkered",
-    "floral",
-    "graphic",
-    "geometric",
-    "polka-dot",
-    "camouflage",
-    "animal-print",
-}
+VALID_PATTERNS = set(PATTERNS)
 VALID_MATERIALS = set(MATERIALS)
 VALID_FORMALITY = set(FORMALITY)
-VALID_FIT = {"slim", "regular", "relaxed", "oversized", "tailored", "cropped"}
-VALID_STYLES = {
-    "casual",
-    "classic",
-    "sporty",
-    "minimalist",
-    "bohemian",
-    "preppy",
-    "streetwear",
-    "elegant",
-    "athletic",
-    "vintage",
-    "modern",
-    "rugged",
-}
-VALID_SEASONS = {"spring", "summer", "fall", "winter", "all-season"}
+VALID_FIT = set(FITS)
+VALID_STYLES = set(STYLES)
+VALID_SEASONS = set(SEASONS)
 
 
 def promote_type_subtype(item_type: str, subtype: object) -> tuple[str, object]:
@@ -368,13 +348,13 @@ class AIService:
             # Auto-orient based on EXIF
             img = ImageOps.exif_transpose(img)
 
-            # Resize to max 512x512 for faster AI processing
-            max_size = 512
+            # Shrink for faster, cheaper AI calls; thumbnail() never enlarges
+            max_size = self.settings.ai_image_max_size
             img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
 
             # Convert to JPEG bytes
             buffer = io.BytesIO()
-            img.save(buffer, format="JPEG", quality=85)
+            img.save(buffer, format="JPEG", quality=self.settings.ai_image_quality)
             buffer.seek(0)
 
             return base64.b64encode(buffer.read()).decode("utf-8")
