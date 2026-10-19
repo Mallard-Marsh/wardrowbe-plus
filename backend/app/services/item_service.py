@@ -14,8 +14,7 @@ from app.models.item import (
     TaggingStatus,
     WashHistory,
 )
-from app.schemas.item import DEFAULT_WASH_INTERVALS, ItemCreate, ItemFilter, ItemUpdate, USER_TAG_KEYS
-from app.utils.garment_vocabulary import TYPES
+from app.schemas.item import DEFAULT_WASH_INTERVALS, ItemCreate, ItemFilter, ItemUpdate
 
 
 class ItemService:
@@ -255,26 +254,12 @@ class ItemService:
             locked = await self.db.execute(
                 select(ClothingItem.tags).where(ClothingItem.id == item.id).with_for_update()
             )
-            existing_tags = dict(locked.scalar_one_or_none() or {})
-            merged = dict(existing_tags)
+            merged = dict(locked.scalar_one_or_none() or {})
             for key, val in incoming.items():
                 if val is None:
                     merged.pop(key, None)
                 else:
                     merged[key] = val
-            # Track which non-user-owned tag keys the user changed by hand, so
-            # C2's "re-analyse and replace" can preserve manual edits.
-            changed_keys = [
-                k
-                for k, v in incoming.items()
-                if k not in USER_TAG_KEYS and existing_tags.get(k) != v
-            ]
-            if changed_keys:
-                merged["user_edited_keys"] = list(
-                    dict.fromkeys(
-                        [*existing_tags.get("user_edited_keys", []), *changed_keys]
-                    )
-                )
             update_data["tags"] = merged
 
         for field, value in update_data.items():
@@ -287,13 +272,6 @@ class ItemService:
             for column in TAG_COLUMNS:
                 if column in incoming:
                     setattr(item, column, incoming[column])
-
-        # When the type changes by hand, clear a subtype that is itself a type
-        # name, so "T-Shirt • Button-down" contradictions don't survive.
-        if "type" in update_data and update_data["type"] is not None:
-            new_type = update_data["type"]
-            if item.subtype and item.subtype in TYPES:
-                item.subtype = None
 
         await self.db.flush()
         # Re-fetch with eager loading to ensure relationships are properly loaded
