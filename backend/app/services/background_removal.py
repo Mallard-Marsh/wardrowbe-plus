@@ -64,6 +64,19 @@ class HttpProvider(BackgroundRemovalProvider):
 _provider: BackgroundRemovalProvider | None = None
 
 
+def release() -> None:
+    """Drop the cached provider so the rembg model and its buffers are GC'd.
+
+    Called by the image worker after each job when BG_REMOVAL_RELEASE_MODEL is on.
+    The next job rebuilds the provider fresh (a few seconds of reload per photo).
+    """
+    global _provider
+    _provider = None
+    import gc
+
+    gc.collect()
+
+
 def get_provider() -> BackgroundRemovalProvider:
     global _provider
     if _provider is not None:

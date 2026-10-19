@@ -1,5 +1,5 @@
 from io import BytesIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -13,6 +13,7 @@ from app.models.item import ClothingItem, ItemStatus
 from app.models.user import User
 from app.schemas.item import RemoveBackgroundRequest
 from app.services.image_service import ImageService
+from app.workers.queues import IMAGE_QUEUE
 
 BLUE = (0, 0, 255)
 
@@ -132,12 +133,11 @@ class TestRemoveBackgroundEndpoint:
         )
         item_id = item.id
 
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
-            response = await client.post(
-                f"/api/v1/items/{item_id}/remove-background",
-                json={},
-                headers=auth_headers,
-            )
+        response = await client.post(
+            f"/api/v1/items/{item_id}/remove-background",
+            json={},
+            headers=auth_headers,
+        )
         assert response.status_code == 409
 
     @pytest.mark.asyncio
@@ -152,17 +152,30 @@ class TestRemoveBackgroundEndpoint:
             status=ItemStatus.processing,
             ai_job_id=None,
         )
+        item_id = item.id
 
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
+        with patch("app.api.items.create_pool", new_callable=AsyncMock) as mock_create_pool:
+            mock_redis = AsyncMock()
+            mock_redis.enqueue_job.return_value.job_id = "fake-job-id"
+            mock_create_pool.return_value = mock_redis
+
             response = await client.post(
-                f"/api/v1/items/{item.id}/remove-background",
+                f"/api/v1/items/{item_id}/remove-background",
                 json={},
                 headers=auth_headers,
             )
         assert response.status_code == 200
+        assert response.json()["status"] == "processing"
+
+        db_session.expire_all()
+        result = await db_session.execute(select(ClothingItem).where(ClothingItem.id == item_id))
+        refreshed = result.scalar_one()
+        assert refreshed.status == ItemStatus.processing
+        assert refreshed.processing_kind == "background_removal"
+        assert refreshed.ai_job_id == "fake-job-id"
 
     @pytest.mark.asyncio
-    async def test_error_kind_item_recovers_to_ready(
+    async def test_error_kind_item_recovers_to_processing(
         self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
     ):
         item = await _make_item(
@@ -173,7 +186,11 @@ class TestRemoveBackgroundEndpoint:
         )
         item_id = item.id
 
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
+        with patch("app.api.items.create_pool", new_callable=AsyncMock) as mock_create_pool:
+            mock_redis = AsyncMock()
+            mock_redis.enqueue_job.return_value.job_id = "fake-job-id"
+            mock_create_pool.return_value = mock_redis
+
             response = await client.post(
                 f"/api/v1/items/{item_id}/remove-background",
                 json={},
@@ -181,23 +198,27 @@ class TestRemoveBackgroundEndpoint:
             )
 
         assert response.status_code == 200
-        assert response.json()["status"] == "ready"
+        assert response.json()["status"] == "processing"
 
         db_session.expire_all()
         result = await db_session.execute(select(ClothingItem).where(ClothingItem.id == item_id))
         refreshed = result.scalar_one()
-        assert refreshed.status == ItemStatus.ready
-        assert refreshed.processing_kind is None
-        assert refreshed.ai_started_at is None
+        assert refreshed.status == ItemStatus.processing
+        assert refreshed.processing_kind == "background_removal"
+        assert refreshed.ai_job_id == "fake-job-id"
 
     @pytest.mark.asyncio
-    async def test_ordinary_ready_item_unaffected(
+    async def test_ordinary_ready_item_queues_for_processing(
         self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
     ):
         item = await _make_item(db_session, test_user, status=ItemStatus.ready)
         item_id = item.id
 
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
+        with patch("app.api.items.create_pool", new_callable=AsyncMock) as mock_create_pool:
+            mock_redis = AsyncMock()
+            mock_redis.enqueue_job.return_value.job_id = "fake-job-id"
+            mock_create_pool.return_value = mock_redis
+
             response = await client.post(
                 f"/api/v1/items/{item_id}/remove-background",
                 json={},
@@ -205,13 +226,14 @@ class TestRemoveBackgroundEndpoint:
             )
 
         assert response.status_code == 200
-        assert response.json()["status"] == "ready"
+        assert response.json()["status"] == "processing"
 
         db_session.expire_all()
         result = await db_session.execute(select(ClothingItem).where(ClothingItem.id == item_id))
         refreshed = result.scalar_one()
-        assert refreshed.status == ItemStatus.ready
-        assert refreshed.processing_kind is None
+        assert refreshed.status == ItemStatus.processing
+        assert refreshed.processing_kind == "background_removal"
+        assert refreshed.ai_job_id == "fake-job-id"
 
 
 class TestHealthFeatures:
