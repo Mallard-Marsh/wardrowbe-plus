@@ -61,7 +61,7 @@ import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { useUpdateItem, useDeleteItem, useReanalyzeItem, useRotateImage, useRemoveBackground, useRestoreOriginal, useReplaceItemImage, useLogWear, useLogWash, useWashHistory, useItemWearStats, useItemWearHistory, useAddItemImage, useDeleteItemImage, useSetPrimaryImage } from '@/lib/hooks/use-items';
-import { CLOTHING_SUBTYPES, Item, ItemTags } from '@/lib/types';
+import { CLOTHING_SUBTYPES, Item } from '@/lib/types';
 import {
   useClothingTypes,
   useClothingColors,
@@ -79,7 +79,6 @@ import {
 import { ColorEyedropper } from '@/components/color-eyedropper';
 import { ACCEPTED_IMAGE_INPUT } from '@/lib/image-types';
 import { GeneratePairingsDialog } from '@/components/generate-pairings-dialog';
-import { ItemTagsEditor } from '@/components/item-tags-editor';
 import { useFeatures } from '@/lib/hooks/use-features';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils';
@@ -150,7 +149,6 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
     favorite: false,
     wash_interval: undefined,
   });
-  const [pendingTagChanges, setPendingTagChanges] = useState<Partial<ItemTags> | null>(null);
   const [showWashHistory, setShowWashHistory] = useState(false);
   const [showWearHistory, setShowWearHistory] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -197,12 +195,8 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
           notes: editForm.notes || undefined,
           favorite: editForm.favorite,
           wash_interval: editForm.wash_interval,
-          // Merge only the tag keys the user changed in the editor, so a partial
-          # update never wipes tags the user didn't touch.
-          tags: pendingTagChanges as ItemTags,
         },
       });
-      setPendingTagChanges(null);
       setIsEditing(false);
     } catch (error) {
       console.error('Failed to update item:', error);
@@ -747,12 +741,6 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
                       {t('view.washIntervalHint')}
                     </p>
                   </div>
-                  {item && (
-                    <ItemTagsEditor
-                      tags={item.tags}
-                      onSave={(changes) => setPendingTagChanges(changes)}
-                    />
-                  )}
                   <div className="flex gap-2 pt-2">
                     <Button
                       variant="outline"

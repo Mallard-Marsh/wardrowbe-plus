@@ -161,10 +161,6 @@ services:
       BG_REMOVAL_MODEL: ${BG_REMOVAL_MODEL:-u2net}
       BG_REMOVAL_URL: ${BG_REMOVAL_URL:-}
       BG_REMOVAL_API_KEY: ${BG_REMOVAL_API_KEY:-}
-      # Drop the rembg model after each job so its ~1.4 GB does not sit in the
-      # container between jobs. Opt in on Vault where memory is tight.
-      BG_REMOVAL_RELEASE_MODEL: ${BG_REMOVAL_RELEASE_MODEL:-false}
-    mem_limit: 2g
     volumes:
       - wardrobe_data:/data/wardrobe
       - rembg_models:/opt/rembg/models

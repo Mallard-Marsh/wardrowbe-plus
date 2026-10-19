@@ -25,10 +25,6 @@ OCCASION_FORMALITY: dict[str, tuple[str, ...]] = {
 }
 COLORS: tuple[str, ...] = tuple(entry["value"] for entry in _DATA["colors"])
 COLOR_ALIASES: dict[str, str] = dict(_DATA["color_aliases"])
-PATTERNS: tuple[str, ...] = tuple(_DATA["patterns"])
-STYLES: tuple[str, ...] = tuple(_DATA["styles"])
-SEASONS: tuple[str, ...] = tuple(_DATA["seasons"])
-FITS: tuple[str, ...] = tuple(_DATA["fits"])
 
 
 # Zero-width space, word joiner and BOM are dropped so that a name made only of them reads as blank

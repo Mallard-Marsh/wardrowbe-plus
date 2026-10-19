@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 # Columns that mirror the tags JSONB key of the same name, so every writer of one must write both.
-TAG_COLUMNS = ("colors", "primary_color", "pattern", "material", "style", "season", "formality", "fit")
+TAG_COLUMNS = ("colors", "primary_color", "pattern", "material", "style", "season", "formality")
 
 
 class ItemStatus(enum.StrEnum):
@@ -84,7 +84,6 @@ class ClothingItem(Base):
     material: Mapped[str | None] = mapped_column(String(50))
     style: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     formality: Mapped[str | None] = mapped_column(String(50))
-    fit: Mapped[str | None] = mapped_column(String(50))
     season: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
 
     # AI metadata
