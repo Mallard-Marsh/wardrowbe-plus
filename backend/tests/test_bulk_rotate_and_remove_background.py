@@ -702,3 +702,61 @@ class TestBulkEndpointsAuthBoundary:
         db_session.expire_all()
         refreshed = await _get_item(db_session, other_item_id)
         assert refreshed.status == ItemStatus.ready
+
+
+class TestRemoveItemBackgroundJobReleasesModel:
+    """The rembg model is freed when the worker has no removal job left (opt in)."""
+
+    @staticmethod
+    async def _run(db_session, item_id, *, release_enabled: bool):
+        settings = MagicMock(bg_removal_release_model=release_enabled)
+        with (
+            patch("app.workers.background_removal.get_db_session", return_value=db_session),
+            patch.object(db_session, "close", new_callable=AsyncMock),
+            patch("app.workers.background_removal.get_settings", return_value=settings),
+            patch("app.services.background_removal.get_provider", return_value=_mock_provider()),
+            patch("app.workers.background_removal.background_removal.release") as release,
+        ):
+            await remove_item_background_job({}, str(item_id), "#FFFFFF")
+        return release
+
+    @pytest.mark.asyncio
+    async def test_releases_after_the_job_when_enabled(self, db_session: AsyncSession, test_user):
+        item = await _make_item(db_session, test_user, status=ItemStatus.processing)
+
+        release = await self._run(db_session, item.id, release_enabled=True)
+
+        release.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_keeps_the_model_when_disabled(self, db_session: AsyncSession, test_user):
+        item = await _make_item(db_session, test_user, status=ItemStatus.processing)
+
+        release = await self._run(db_session, item.id, release_enabled=False)
+
+        release.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_waits_for_overlapping_jobs(self, db_session: AsyncSession, test_user):
+        # IMAGE_WORKER_CONCURRENCY above 1: another job is still inside the
+        # function, so freeing the model now would pull it out from under it.
+        import app.workers.background_removal as worker
+
+        item = await _make_item(db_session, test_user, status=ItemStatus.processing)
+        worker._active_jobs = 1
+        try:
+            release = await self._run(db_session, item.id, release_enabled=True)
+            assert worker._active_jobs == 1
+        finally:
+            worker._active_jobs = 0
+
+        release.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_releases_after_a_failed_job_too(self, db_session: AsyncSession, test_user):
+        import app.workers.background_removal as worker
+
+        release = await self._run(db_session, uuid4(), release_enabled=True)
+
+        assert worker._active_jobs == 0
+        release.assert_called_once()

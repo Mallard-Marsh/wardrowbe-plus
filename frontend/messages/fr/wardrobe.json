@@ -150,6 +150,7 @@
   "itemCount": "{count, plural, one {# article dans votre garde-robe} other {# articles dans votre garde-robe}}",
   "itemDetail": {
     "actions": {
+      "backgroundRemovalStarted": "Suppression de l'arrière-plan…",
       "backgroundRemoveError": "Échec de la suppression de l'arrière-plan",
       "backgroundRemoved": "Arrière-plan supprimé",
       "cancelEditing": "Annuler la modification",

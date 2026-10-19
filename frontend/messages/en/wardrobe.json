@@ -150,6 +150,7 @@
   "itemCount": "{count, plural, one {# item in your wardrobe} other {# items in your wardrobe}}",
   "itemDetail": {
     "actions": {
+      "backgroundRemovalStarted": "Removing background…",
       "backgroundRemoveError": "Failed to remove background",
       "backgroundRemoved": "Background removed",
       "cancelEditing": "Cancel editing",

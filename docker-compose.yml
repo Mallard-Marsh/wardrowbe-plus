@@ -161,6 +161,7 @@ services:
       BG_REMOVAL_MODEL: ${BG_REMOVAL_MODEL:-u2net}
       BG_REMOVAL_URL: ${BG_REMOVAL_URL:-}
       BG_REMOVAL_API_KEY: ${BG_REMOVAL_API_KEY:-}
+      BG_REMOVAL_RELEASE_MODEL: ${BG_REMOVAL_RELEASE_MODEL:-false}
     volumes:
       - wardrobe_data:/data/wardrobe
       - rembg_models:/opt/rembg/models
