@@ -58,25 +58,12 @@ from app.schemas.item import (
     TaggingProgressResponse,
     WashHistoryResponse,
 )
-from app.utils.garment_vocabulary import (
-    COLORS,
-    COLOR_ALIASES,
-    FORMALITY,
-    FITS,
-    MATERIALS,
-    PATTERNS,
-    SEASONS,
-    STYLES,
-    TYPES,
-    normalize_color,
-)
 from app.services.image_service import ImageService
 from app.services.item_service import ItemService
 from app.utils.auth import get_current_user
 from app.utils.signed_urls import sign_optional
 from app.utils.timezone import get_user_today
 from app.utils.uploads import UploadTooLargeError, read_upload_within_limit
-from app.workers.background_removal import remove_item_background_job
 from app.workers.queues import IMAGE_QUEUE, TAGGING_QUEUE, queue_for_kind
 from app.workers.settings import get_redis_settings
 
@@ -1302,14 +1289,6 @@ async def update_item(
         )
 
     update_data = item_data.model_dump(exclude_unset=True)
-
-    # Validate any tag values being changed against the vocabulary. Older items
-    # holding off-list values are untouched - only keys present in this update
-    # are checked, so a partial update never fails on a legacy value.
-    tags_incoming = update_data.get("tags")
-    if tags_incoming is not None:
-        _validate_tag_values(tags_incoming)
-
     if any(_has_tag_content(f, update_data.get(f)) for f in TAG_WRITEBACK_FIELDS):
         item.tagging_status = TaggingStatus.tagged
         item.tagged_by = TaggedBy.manual
@@ -1317,68 +1296,6 @@ async def update_item(
 
     item = await item_service.update(item, item_data)
     return ItemResponse.model_validate(item)
-
-
-def _validate_tag_values(tags: dict) -> None:
-    """Reject unknown tag values (422) for keys being changed in this update."""
-    errors: list[str] = []
-
-    pattern = tags.get("pattern")
-    if pattern is not None:
-        normalized = str(pattern).strip().lower()
-        if normalized not in PATTERNS:
-            errors.append(f"pattern: {pattern!r} is not a valid pattern")
-
-    material = tags.get("material")
-    if material is not None:
-        normalized = str(material).strip().lower()
-        if normalized not in MATERIALS:
-            errors.append(f"material: {material!r} is not a valid material")
-
-    formality = tags.get("formality")
-    if formality is not None:
-        normalized = str(formality).strip().lower()
-        if normalized not in FORMALITY:
-            errors.append(f"formality: {formality!r} is not a valid formality")
-
-    fit = tags.get("fit")
-    if fit is not None:
-        normalized = str(fit).strip().lower()
-        if normalized not in FITS:
-            errors.append(f"fit: {fit!r} is not a valid fit")
-
-    colors = tags.get("colors")
-    if colors is not None:
-        for c in colors:
-            normalized = normalize_color(c)
-            if normalized not in COLORS:
-                errors.append(f"color: {c!r} is not a valid color")
-
-    style = tags.get("style")
-    if style is not None:
-        for s in style:
-            normalized = str(s).strip().lower()
-            if normalized not in STYLES:
-                errors.append(f"style: {s!r} is not a valid style")
-
-    season = tags.get("season")
-    if season is not None:
-        for s in season:
-            normalized = str(s).strip().lower()
-            if normalized not in SEASONS:
-                errors.append(f"season: {s!r} is not a valid season")
-
-    primary_color = tags.get("primary_color")
-    if primary_color is not None:
-        normalized = normalize_color(primary_color)
-        if normalized not in COLORS:
-            errors.append(f"primary_color: {primary_color!r} is not a valid color")
-
-    if errors:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="; ".join(errors),
-        )
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -1877,51 +1794,44 @@ async def remove_item_background(
     hex_color = request.bg_color.lstrip("#")
     bg_color = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
-    # Enqueue the work on the image worker instead of running it in-process,
-    # so the ~1.4 GB rembg model does not live in the API container.
-    item.status = ItemStatus.processing
-    item.processing_kind = ProcessingKind.background_removal
-    item.ai_started_at = None
-    await db.commit()
-
-    redis = None
     try:
-        redis = await create_pool(get_redis_settings())
-        job = await redis.enqueue_job(
-            "remove_item_background_job",
-            str(item.id),
-            request.bg_color,
-            _queue_name=IMAGE_QUEUE,
-        )
-        if job is None:
-            raise RuntimeError("enqueue_job returned None")
-        item.ai_job_id = job.job_id
+        image_service = ImageService()
+        result = await asyncio.to_thread(image_service.remove_background, item.image_path, bg_color)
+        item.original_image_path = result["original_backup_path"]
+        if recovering_from_error:
+            item.status = ItemStatus.ready
+            item.processing_kind = None
+            item.ai_started_at = None
         await db.commit()
         await db.refresh(
             item,
             attribute_names=[
+                "original_image_path",
                 "status",
                 "processing_kind",
                 "ai_started_at",
-                "ai_job_id",
                 "updated_at",
             ],
         )
         return ItemResponse.model_validate(item)
+    except ImportError:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Background removal provider not available. "
+            "For rembg: pip install rembg[cpu]. "
+            "For HTTP provider: set BG_REMOVAL_PROVIDER=http and BG_REMOVAL_URL.",
+        ) from None
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from None
     except Exception as e:
-        logger.error(f"Failed to queue background removal for {item.id}: {e}")
-        # On enqueue failure, roll the status back so the client can retry.
-        item.status = ItemStatus.ready
-        item.processing_kind = None
-        item.ai_job_id = None
-        await db.commit()
+        logger.error(f"Failed to remove background: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to queue background removal",
+            detail="Failed to remove background",
         ) from None
-    finally:
-        if redis:
-            await redis.aclose()
 
 
 @router.post("/{item_id}/restore-original", response_model=ItemResponse)

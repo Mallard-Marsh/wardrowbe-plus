@@ -26,12 +26,9 @@ class ItemTags(BaseModel):
     size: str | None = Field(None, max_length=32)
     care_instructions: str | None = Field(None, max_length=255)
     source_url: str | None = Field(None, max_length=500)
-    # Tag keys the user has edited by hand. C2 uses this so a "re-analyse and
-    # replace" keeps manual edits while refreshing AI-guessed tags.
-    user_edited_keys: list[str] = Field(default_factory=list)
 
 
-USER_TAG_KEYS = frozenset({"size", "care_instructions", "source_url", "user_edited_keys"})
+USER_TAG_KEYS = frozenset({"size", "care_instructions", "source_url"})
 
 
 class ItemBase(BaseModel):
