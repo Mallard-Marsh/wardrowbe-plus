@@ -170,6 +170,10 @@ class Settings(BaseSettings):
     bg_removal_model: str = Field(default="u2net")  # rembg model name
     bg_removal_url: str | None = Field(default=None)  # URL for http provider (e.g. withoutbg)
     bg_removal_api_key: str | None = Field(default=None)  # API key for http provider
+    # Free the rembg model (about 1.4 GB) when the image worker has no job left,
+    # instead of keeping it loaded until the container restarts. The next job
+    # reloads it, which adds a few seconds. Off by default.
+    bg_removal_release_model: bool = Field(default=False)
 
     @property
     def effective_ai_vision_enabled(self) -> bool:

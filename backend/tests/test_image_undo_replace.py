@@ -1,5 +1,5 @@
 from io import BytesIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.item import ClothingItem, ItemStatus
 from app.models.user import User
 from app.services.image_service import ImageService
+from app.workers.background_removal import remove_item_background_job
 
 GREEN = (10, 200, 30)
 RED = (220, 30, 20)
@@ -53,6 +54,18 @@ async def _make_item(db_session: AsyncSession, user: User) -> ClothingItem:
     )
     db_session.add(item)
     await db_session.commit()
+    await db_session.refresh(item)
+    return item
+
+
+async def _run_removal_job(db_session: AsyncSession, item: ClothingItem) -> ClothingItem:
+    """Run the image worker's removal job for an item, as the endpoint's queued job would."""
+    with (
+        patch("app.workers.background_removal.get_db_session", return_value=db_session),
+        patch.object(db_session, "close", new_callable=AsyncMock),
+        patch("app.services.background_removal.get_provider", return_value=_mock_provider()),
+    ):
+        await remove_item_background_job({}, str(item.id), "#FFFFFF")
     await db_session.refresh(item)
     return item
 
@@ -116,35 +129,39 @@ class TestRemoveBackgroundBackup:
 
 class TestRemoveBackgroundEndpointBackup:
     @pytest.mark.asyncio
-    async def test_sets_original_image_path(
-        self, client: AsyncClient, auth_headers, item_with_image: ClothingItem
+    async def test_job_sets_original_image_path(
+        self, client: AsyncClient, auth_headers, db_session: AsyncSession, item_with_image
     ):
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
+        with patch("app.api.items.create_pool", new_callable=AsyncMock) as mock_create_pool:
+            mock_redis = AsyncMock()
+            mock_redis.enqueue_job.return_value.job_id = "job-1"
+            mock_create_pool.return_value = mock_redis
             response = await client.post(
                 f"/api/v1/items/{item_with_image.id}/remove-background",
                 json={},
                 headers=auth_headers,
             )
-
         assert response.status_code == 200
-        data = response.json()
-        assert data["original_image_path"] is not None
-        assert data["original_image_path"].endswith("_orig.jpg")
-        assert ImageService().get_image_path(data["original_image_path"]).exists()
+        assert response.json()["status"] == "processing"
+
+        item = await _run_removal_job(db_session, item_with_image)
+
+        assert item.original_image_path is not None
+        assert item.original_image_path.endswith("_orig.jpg")
+        assert ImageService().get_image_path(item.original_image_path).exists()
 
 
 class TestRestoreOriginalEndpoint:
     @pytest.mark.asyncio
     async def test_restores_and_clears_backup(
-        self, client: AsyncClient, auth_headers, item_with_image: ClothingItem
+        self,
+        client: AsyncClient,
+        auth_headers,
+        db_session: AsyncSession,
+        item_with_image: ClothingItem,
     ):
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
-            removal = await client.post(
-                f"/api/v1/items/{item_with_image.id}/remove-background",
-                json={},
-                headers=auth_headers,
-            )
-        backup_path = removal.json()["original_image_path"]
+        item = await _run_removal_job(db_session, item_with_image)
+        backup_path = item.original_image_path
 
         response = await client.post(
             f"/api/v1/items/{item_with_image.id}/restore-original",
@@ -201,7 +218,11 @@ class TestRestoreOriginalEndpoint:
 class TestReplaceImageEndpoint:
     @pytest.mark.asyncio
     async def test_replaces_image_and_cleans_up(
-        self, client: AsyncClient, auth_headers, item_with_image: ClothingItem
+        self,
+        client: AsyncClient,
+        auth_headers,
+        db_session: AsyncSession,
+        item_with_image: ClothingItem,
     ):
         svc = ImageService()
         old_paths = {
@@ -210,13 +231,8 @@ class TestReplaceImageEndpoint:
             "thumbnail_path": item_with_image.thumbnail_path,
         }
         old_hash = item_with_image.image_hash
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
-            removal = await client.post(
-                f"/api/v1/items/{item_with_image.id}/remove-background",
-                json={},
-                headers=auth_headers,
-            )
-        backup_path = removal.json()["original_image_path"]
+        item = await _run_removal_job(db_session, item_with_image)
+        backup_path = item.original_image_path
 
         response = await client.put(
             f"/api/v1/items/{item_with_image.id}/image",
@@ -266,15 +282,14 @@ class TestReplaceImageEndpoint:
 class TestDeleteCleansBackup:
     @pytest.mark.asyncio
     async def test_delete_item_removes_backup(
-        self, client: AsyncClient, auth_headers, item_with_image: ClothingItem
+        self,
+        client: AsyncClient,
+        auth_headers,
+        db_session: AsyncSession,
+        item_with_image: ClothingItem,
     ):
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
-            removal = await client.post(
-                f"/api/v1/items/{item_with_image.id}/remove-background",
-                json={},
-                headers=auth_headers,
-            )
-        backup_path = removal.json()["original_image_path"]
+        item = await _run_removal_job(db_session, item_with_image)
+        backup_path = item.original_image_path
         assert ImageService().get_image_path(backup_path).exists()
 
         response = await client.delete(f"/api/v1/items/{item_with_image.id}", headers=auth_headers)
