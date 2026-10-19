@@ -20,7 +20,7 @@ const header = (source) => [
   '// Do not edit by hand; run `npm run vocab:gen`.',
 ];
 
-function renderVocabulary({ roles: roleOrder, types, materials, formality, occasions, colors, color_aliases: colorAliases }) {
+function renderVocabulary({ roles: roleOrder, types, materials, formality, occasions, colors, color_aliases: colorAliases, patterns, styles, seasons, fits }) {
   const roles = types.map(({ value, role }) => `  ${key(value)}: ${quote(role)},`).join('\n');
   const swatches = colors.map(({ value, hex }) => `  { value: ${quote(value)}, hex: ${quote(hex)} },`).join('\n');
   const aliases = Object.entries(colorAliases)
@@ -32,6 +32,11 @@ function renderVocabulary({ roles: roleOrder, types, materials, formality, occas
     `export const FORMALITY_VALUES = ${list(formality)};`,
     `export const OCCASION_VALUES = ${list(occasions.map((o) => o.value))};`,
     `export const ROLE_VALUES = ${list(roleOrder)};`,
+    '',
+    `export const PATTERN_VALUES = ${list(patterns)};`,
+    `export const STYLE_VALUES = ${list(styles)};`,
+    `export const SEASON_VALUES = ${list(seasons)};`,
+    `export const FIT_VALUES = ${list(fits)};`,
     '',
     'export const ITEM_ROLE: Record<string, string> = {',
     roles,

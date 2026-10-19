@@ -351,24 +351,30 @@ def _preference_score(
     learned: dict | None,
 ) -> float:
     score = 1.0
-    color = (item.primary_color or "").lower()
+    # Check favourite/avoid colours against every colour on the item, not only
+    # the primary, so a secondary colour you set can shift the score.
+    all_colors = [(item.primary_color or "").lower()] + [c.lower() for c in (item.colors or [])]
 
     if preferences:
-        fav_colors = [c.lower() for c in (preferences.color_favorites or [])]
-        avoid_colors = [c.lower() for c in (preferences.color_avoid or [])]
+        fav_colors = set(c.lower() for c in (preferences.color_favorites or []))
+        avoid_colors = set(c.lower() for c in (preferences.color_avoid or []))
 
-        if color and color in fav_colors:
+        matched_fav = any(c in fav_colors for c in all_colors if c)
+        matched_avoid = any(c in avoid_colors for c in all_colors if c)
+        if matched_fav:
             score += 0.1
-        if color and color in avoid_colors:
+        if matched_avoid:
             score -= 0.3
 
     if learned:
-        learned_favs = [c.lower() for c in learned.get("learned_favorite_colors", [])]
-        learned_avoids = [c.lower() for c in learned.get("learned_avoid_colors", [])]
+        learned_favs = set(c.lower() for c in learned.get("learned_favorite_colors", []))
+        learned_avoids = set(c.lower() for c in learned.get("learned_avoid_colors", []))
 
-        if color and color in learned_favs:
+        matched_learned_fav = any(c in learned_favs for c in all_colors if c)
+        matched_learned_avoid = any(c in learned_avoids for c in all_colors if c)
+        if matched_learned_fav:
             score += 0.05
-        if color and color in learned_avoids:
+        if matched_learned_avoid:
             score -= 0.15
 
         learned_styles = [s.lower() for s in learned.get("learned_preferred_styles", [])]

@@ -111,5 +111,46 @@
     "mauve": "purple",
     "lavender": "purple",
     "mustard": "yellow"
-  }
+  },
+  "patterns": [
+    "solid",
+    "striped",
+    "plaid",
+    "checkered",
+    "floral",
+    "graphic",
+    "geometric",
+    "polka-dot",
+    "camouflage",
+    "animal-print"
+  ],
+  "styles": [
+    "casual",
+    "classic",
+    "sporty",
+    "minimalist",
+    "bohemian",
+    "preppy",
+    "streetwear",
+    "elegant",
+    "athletic",
+    "vintage",
+    "modern",
+    "rugged"
+  ],
+  "seasons": [
+    "spring",
+    "summer",
+    "fall",
+    "winter",
+    "all-season"
+  ],
+  "fits": [
+    "slim",
+    "regular",
+    "relaxed",
+    "oversized",
+    "tailored",
+    "cropped"
+  ]
 }
