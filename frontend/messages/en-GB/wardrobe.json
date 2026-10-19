@@ -189,6 +189,19 @@
     },
     "primaryColor": "Primary Colour",
     "subtype": "Subtype",
+    "tagsEditor": {
+      "fit": "Fit",
+      "formality": "Formality",
+      "hint": "Fix anything the AI got wrong. Your changes are kept if the item is analysed again.",
+      "material": "Material",
+      "none": "None",
+      "pattern": "Pattern",
+      "season": "Season",
+      "secondaryColor": "Secondary colour",
+      "style": "Style",
+      "tertiaryColor": "Tertiary colour",
+      "title": "AI tags"
+    },
     "titles": {
       "analysisInProgress": "Analysis in progress...",
       "deleteImage": "Delete image",
