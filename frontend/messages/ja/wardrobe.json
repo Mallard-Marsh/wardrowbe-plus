@@ -150,6 +150,7 @@
   "itemCount": "{count, plural, one {ワードローブに# 件のアイテム} other {ワードローブに# 件のアイテム}}",
   "itemDetail": {
     "actions": {
+      "backgroundRemovalStarted": "背景を削除しています…",
       "backgroundRemoveError": "背景の削除に失敗しました",
       "backgroundRemoved": "背景を削除しました",
       "cancelEditing": "編集をキャンセル",

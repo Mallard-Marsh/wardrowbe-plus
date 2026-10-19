@@ -1,3 +1,5 @@
+import ctypes
+import gc
 import logging
 from abc import ABC, abstractmethod
 from io import BytesIO
@@ -62,6 +64,29 @@ class HttpProvider(BackgroundRemovalProvider):
 
 
 _provider: BackgroundRemovalProvider | None = None
+
+
+def release() -> None:
+    """Drop the cached provider so the rembg model can be freed.
+
+    The next get_provider() call builds a new one (a few seconds to reload).
+    Callers must make sure no removal is still running; the image worker only
+    calls this when its last job has finished.
+    """
+    global _provider
+    _provider = None
+    gc.collect()
+    _return_freed_memory_to_os()
+
+
+def _return_freed_memory_to_os() -> None:
+    # glibc keeps freed memory in its arenas, so the container would stay as
+    # large as it was while the model was loaded. malloc_trim hands it back.
+    # It only exists on glibc Linux; anywhere else there is nothing to do.
+    try:
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except (OSError, AttributeError):
+        pass
 
 
 def get_provider() -> BackgroundRemovalProvider:
