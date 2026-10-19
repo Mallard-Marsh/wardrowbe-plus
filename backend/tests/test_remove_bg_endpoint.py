@@ -1,5 +1,6 @@
+from contextlib import contextmanager
 from io import BytesIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -13,20 +14,13 @@ from app.models.item import ClothingItem, ItemStatus
 from app.models.user import User
 from app.schemas.item import RemoveBackgroundRequest
 from app.services.image_service import ImageService
-
-BLUE = (0, 0, 255)
+from app.workers.queues import IMAGE_QUEUE
 
 
 def _jpeg_bytes(size: tuple[int, int] = (400, 600)) -> bytes:
     buf = BytesIO()
     Image.new("RGB", size, (10, 200, 30)).save(buf, format="JPEG")
     return buf.getvalue()
-
-
-def _mock_provider():
-    provider = MagicMock()
-    provider.remove.side_effect = lambda img: Image.new("RGBA", img.size, (*BLUE, 255))
-    return provider
 
 
 async def _make_item(db_session: AsyncSession, user: User, **overrides) -> ClothingItem:
@@ -49,6 +43,16 @@ async def _make_item(db_session: AsyncSession, user: User, **overrides) -> Cloth
     await db_session.commit()
     await db_session.refresh(item)
     return item
+
+
+@contextmanager
+def _fake_queue():
+    """Stand in for the Redis job queue so no real job is enqueued."""
+    with patch("app.api.items.create_pool", new_callable=AsyncMock) as create_pool:
+        redis = AsyncMock()
+        redis.enqueue_job.return_value.job_id = "fake-job-id"
+        create_pool.return_value = redis
+        yield redis
 
 
 class TestRemoveBackgroundRequest:
@@ -130,15 +134,15 @@ class TestRemoveBackgroundEndpoint:
             status=ItemStatus.processing,
             ai_job_id="live-job-id",
         )
-        item_id = item.id
 
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
+        with _fake_queue() as redis:
             response = await client.post(
-                f"/api/v1/items/{item_id}/remove-background",
+                f"/api/v1/items/{item.id}/remove-background",
                 json={},
                 headers=auth_headers,
             )
         assert response.status_code == 409
+        redis.enqueue_job.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_orphaned_processing_item_not_blocked(
@@ -153,7 +157,7 @@ class TestRemoveBackgroundEndpoint:
             ai_job_id=None,
         )
 
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
+        with _fake_queue():
             response = await client.post(
                 f"/api/v1/items/{item.id}/remove-background",
                 json={},
@@ -162,7 +166,68 @@ class TestRemoveBackgroundEndpoint:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_error_kind_item_recovers_to_ready(
+    @pytest.mark.parametrize(
+        ("status", "kind"),
+        [
+            (ItemStatus.ready, None),
+            (ItemStatus.error, "background_removal"),
+        ],
+    )
+    async def test_queues_the_job_on_the_image_queue(
+        self,
+        client: AsyncClient,
+        test_user,
+        auth_headers,
+        db_session: AsyncSession,
+        status,
+        kind,
+    ):
+        # The removal runs on the image worker, not in the API process, so the
+        # endpoint only marks the item processing and enqueues the job.
+        item = await _make_item(db_session, test_user, status=status, processing_kind=kind)
+        item_id = item.id
+
+        with _fake_queue() as redis:
+            response = await client.post(
+                f"/api/v1/items/{item_id}/remove-background",
+                json={"bg_color": "#112233"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "processing"
+        redis.enqueue_job.assert_awaited_once_with(
+            "remove_item_background_job", str(item_id), "#112233", _queue_name=IMAGE_QUEUE
+        )
+
+        db_session.expire_all()
+        result = await db_session.execute(select(ClothingItem).where(ClothingItem.id == item_id))
+        refreshed = result.scalar_one()
+        assert refreshed.status == ItemStatus.processing
+        assert refreshed.processing_kind == "background_removal"
+        assert refreshed.ai_started_at is None
+        assert refreshed.ai_job_id == "fake-job-id"
+
+    @pytest.mark.asyncio
+    async def test_does_not_run_the_model_in_the_api_process(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    ):
+        item = await _make_item(db_session, test_user, status=ItemStatus.ready)
+
+        with (
+            _fake_queue(),
+            patch("app.services.background_removal.get_provider") as get_provider,
+        ):
+            await client.post(
+                f"/api/v1/items/{item.id}/remove-background",
+                json={},
+                headers=auth_headers,
+            )
+
+        get_provider.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_failed_enqueue_puts_the_item_back_and_returns_500(
         self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
     ):
         item = await _make_item(
@@ -173,45 +238,23 @@ class TestRemoveBackgroundEndpoint:
         )
         item_id = item.id
 
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
+        with _fake_queue() as redis:
+            redis.enqueue_job.side_effect = RuntimeError("redis down")
             response = await client.post(
                 f"/api/v1/items/{item_id}/remove-background",
                 json={},
                 headers=auth_headers,
             )
 
-        assert response.status_code == 200
-        assert response.json()["status"] == "ready"
+        assert response.status_code == 500
 
         db_session.expire_all()
         result = await db_session.execute(select(ClothingItem).where(ClothingItem.id == item_id))
         refreshed = result.scalar_one()
-        assert refreshed.status == ItemStatus.ready
-        assert refreshed.processing_kind is None
-        assert refreshed.ai_started_at is None
-
-    @pytest.mark.asyncio
-    async def test_ordinary_ready_item_unaffected(
-        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
-    ):
-        item = await _make_item(db_session, test_user, status=ItemStatus.ready)
-        item_id = item.id
-
-        with patch("app.services.background_removal.get_provider", return_value=_mock_provider()):
-            response = await client.post(
-                f"/api/v1/items/{item_id}/remove-background",
-                json={},
-                headers=auth_headers,
-            )
-
-        assert response.status_code == 200
-        assert response.json()["status"] == "ready"
-
-        db_session.expire_all()
-        result = await db_session.execute(select(ClothingItem).where(ClothingItem.id == item_id))
-        refreshed = result.scalar_one()
-        assert refreshed.status == ItemStatus.ready
-        assert refreshed.processing_kind is None
+        # Back to what it was, so the user can simply retry.
+        assert refreshed.status == ItemStatus.error
+        assert refreshed.processing_kind == "background_removal"
+        assert refreshed.ai_job_id is None
 
 
 class TestHealthFeatures:

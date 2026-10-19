@@ -179,6 +179,20 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
     }
   }, [item?.id]);
 
+  // Background removal runs on the image worker, so the new photo arrives after the request
+  // has returned. When the backup path appears on the item being shown, reload the photo
+  // and say so; a different item or a restore (path cleared) must not trigger it.
+  const previousBackup = useRef<{ id: string; path: string | null } | null>(null);
+  useEffect(() => {
+    const path = item?.original_image_path ?? null;
+    const previous = previousBackup.current;
+    previousBackup.current = item ? { id: item.id, path } : null;
+    if (item && previous && previous.id === item.id && !previous.path && path) {
+      setImageKey((k) => k + 1);
+      toast.success(t('actions.backgroundRemoved'));
+    }
+  }, [item?.id, item?.original_image_path, t]);
+
   if (!item) return null;
 
   const handleSave = async () => {
@@ -276,8 +290,7 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
   const handleRemoveBackground = async () => {
     try {
       await removeBackground.mutateAsync({ id: item.id });
-      setImageKey((k) => k + 1);
-      toast.success(t('actions.backgroundRemoved'));
+      toast.info(t('actions.backgroundRemovalStarted'));
     } catch (error) {
       console.error('Failed to remove background:', error);
       toast.error(t('actions.backgroundRemoveError'));

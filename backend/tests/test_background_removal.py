@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PIL import Image
 
+from app.services import background_removal
 from app.services.background_removal import (
     BackgroundRemovalProvider,
     HttpProvider,
@@ -179,3 +180,23 @@ class TestGetProvider:
     def test_is_abstract(self):
         with pytest.raises(TypeError):
             BackgroundRemovalProvider()
+
+
+class TestRelease:
+    def test_drops_the_cached_provider(self):
+        background_removal._provider = MagicMock()
+        background_removal.release()
+        assert background_removal._provider is None
+
+    def test_next_get_provider_builds_a_new_one(self):
+        background_removal._provider = None
+        first = get_provider()
+        background_removal.release()
+        assert get_provider() is not first
+        background_removal._provider = None
+
+    def test_survives_a_platform_without_malloc_trim(self):
+        background_removal._provider = MagicMock()
+        with patch("app.services.background_removal.ctypes.CDLL", side_effect=OSError("no libc")):
+            background_removal.release()
+        assert background_removal._provider is None

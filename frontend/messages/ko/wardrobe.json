@@ -150,6 +150,7 @@
   "itemCount": "{count, plural, other {옷장에 아이템 #개}}",
   "itemDetail": {
     "actions": {
+      "backgroundRemovalStarted": "배경을 제거하는 중…",
       "backgroundRemoveError": "배경 제거 실패",
       "backgroundRemoved": "배경이 제거되었어요",
       "cancelEditing": "편집 취소",

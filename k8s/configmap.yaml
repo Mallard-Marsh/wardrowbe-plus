@@ -81,3 +81,5 @@ data:
   BG_REMOVAL_PROVIDER: "rembg"
   BG_REMOVAL_MODEL: "u2net"
   BG_REMOVAL_URL: ""
+  # Free the rembg model (about 1.4 GB) when the image worker is idle; the next job reloads it.
+  BG_REMOVAL_RELEASE_MODEL: "false"

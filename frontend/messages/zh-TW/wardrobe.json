@@ -150,6 +150,7 @@
   "itemCount": "{count, plural, one {衣櫥中有 # 件單品} other {衣櫥中有 # 件單品}}",
   "itemDetail": {
     "actions": {
+      "backgroundRemovalStarted": "正在移除背景…",
       "backgroundRemoveError": "移除背景失敗",
       "backgroundRemoved": "背景已移除",
       "cancelEditing": "取消編輯",
