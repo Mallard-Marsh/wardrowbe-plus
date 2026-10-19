@@ -170,6 +170,18 @@ class Settings(BaseSettings):
     bg_removal_model: str = Field(default="u2net")  # rembg model name
     bg_removal_url: str | None = Field(default=None)  # URL for http provider (e.g. withoutbg)
     bg_removal_api_key: str | None = Field(default=None)  # API key for http provider
+    # When on, the image worker drops the rembg model and runs garbage
+    # collection after each job, so the ~1.4 GB does not sit in the container
+    # between jobs. Default off so upstream behaviour is unchanged.
+    bg_removal_release_model: bool = Field(default=False)
+
+    # AI image preprocessing
+    # The AI sees every photo resized to this many pixels on the long edge.
+    # Default 512 keeps existing behaviour; raising it (e.g. 1024 on Vault)
+    # lets the model see patterns and small colours it would otherwise miss.
+    ai_image_max_size: int = Field(default=512, ge=256, le=2048)
+    # JPEG quality used when the resized photo is re-encoded for the model.
+    ai_image_quality: int = Field(default=85, ge=1, le=100)
 
     @property
     def effective_ai_vision_enabled(self) -> bool:

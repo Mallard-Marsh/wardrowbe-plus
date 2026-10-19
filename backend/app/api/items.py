@@ -64,6 +64,7 @@ from app.utils.auth import get_current_user
 from app.utils.signed_urls import sign_optional
 from app.utils.timezone import get_user_today
 from app.utils.uploads import UploadTooLargeError, read_upload_within_limit
+from app.workers.background_removal import remove_item_background_job
 from app.workers.queues import IMAGE_QUEUE, TAGGING_QUEUE, queue_for_kind
 from app.workers.settings import get_redis_settings
 
@@ -1794,44 +1795,51 @@ async def remove_item_background(
     hex_color = request.bg_color.lstrip("#")
     bg_color = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
+    # Enqueue the work on the image worker instead of running it in-process,
+    # so the ~1.4 GB rembg model does not live in the API container.
+    item.status = ItemStatus.processing
+    item.processing_kind = ProcessingKind.background_removal
+    item.ai_started_at = None
+    await db.commit()
+
+    redis = None
     try:
-        image_service = ImageService()
-        result = await asyncio.to_thread(image_service.remove_background, item.image_path, bg_color)
-        item.original_image_path = result["original_backup_path"]
-        if recovering_from_error:
-            item.status = ItemStatus.ready
-            item.processing_kind = None
-            item.ai_started_at = None
+        redis = await create_pool(get_redis_settings())
+        job = await redis.enqueue_job(
+            "remove_item_background_job",
+            str(item.id),
+            request.bg_color,
+            _queue_name=IMAGE_QUEUE,
+        )
+        if job is None:
+            raise RuntimeError("enqueue_job returned None")
+        item.ai_job_id = job.job_id
         await db.commit()
         await db.refresh(
             item,
             attribute_names=[
-                "original_image_path",
                 "status",
                 "processing_kind",
                 "ai_started_at",
+                "ai_job_id",
                 "updated_at",
             ],
         )
         return ItemResponse.model_validate(item)
-    except ImportError:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Background removal provider not available. "
-            "For rembg: pip install rembg[cpu]. "
-            "For HTTP provider: set BG_REMOVAL_PROVIDER=http and BG_REMOVAL_URL.",
-        ) from None
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from None
     except Exception as e:
-        logger.error(f"Failed to remove background: {e}")
+        logger.error(f"Failed to queue background removal for {item.id}: {e}")
+        # On enqueue failure, roll the status back so the client can retry.
+        item.status = ItemStatus.ready
+        item.processing_kind = None
+        item.ai_job_id = None
+        await db.commit()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to remove background",
+            detail="Failed to queue background removal",
         ) from None
+    finally:
+        if redis:
+            await redis.aclose()
 
 
 @router.post("/{item_id}/restore-original", response_model=ItemResponse)

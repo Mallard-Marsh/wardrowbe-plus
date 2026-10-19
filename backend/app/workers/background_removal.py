@@ -5,7 +5,9 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.models.item import ClothingItem, ItemStatus
+from app.services import background_removal
 from app.services.image_service import ImageService
 from app.workers.db import get_db_session
 
@@ -55,4 +57,8 @@ async def remove_item_background_job(ctx: dict, item_id: str, bg_color_hex: str)
             await db.commit()
             return {"status": "error", "error": str(e)}
     finally:
+        # Release the cached rembg model so its ~1.4 GB does not sit in the
+        # container between jobs. The next job rebuilds it (a few seconds).
+        if get_settings().bg_removal_release_model:
+            background_removal.release()
         await db.close()
