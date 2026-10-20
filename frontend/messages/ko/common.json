@@ -11,6 +11,7 @@
     "clearSelection": "선택 해제",
     "noneSelected": "선택 없음",
     "reanalyze": "재분석",
+    "reanalyzeAndReplace": "AI 태그 다시 분석하고 바꾸기",
     "removeBackground": "Remove background",
     "rotateCcw": "Rotate left",
     "rotateCw": "Rotate right",

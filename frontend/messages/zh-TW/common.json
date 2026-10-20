@@ -11,6 +11,7 @@
     "clearSelection": "清除選取",
     "noneSelected": "未選取",
     "reanalyze": "重新分析",
+    "reanalyzeAndReplace": "重新分析並取代 AI 標籤",
     "removeBackground": "Remove background",
     "rotateCcw": "Rotate left",
     "rotateCw": "Rotate right",
