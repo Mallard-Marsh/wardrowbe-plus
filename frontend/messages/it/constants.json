@@ -39,6 +39,8 @@
   },
   "materials": {
     "canvas": "Tela",
+    "cashmere": "Cashmere",
+    "corduroy": "Velluto a coste",
     "cotton": "Cotone",
     "denim": "Denim",
     "down": "Piumino",
@@ -48,9 +50,11 @@
     "linen": "Lino",
     "nylon": "Nylon",
     "polyester": "Poliestere",
+    "satin": "Raso",
     "shearling": "Montone",
     "silk": "Seta",
     "suede": "Camoscio",
+    "tweed": "Tweed",
     "velvet": "Velluto",
     "wool": "Lana"
   },
@@ -87,15 +91,23 @@
   },
   "patterns": {
     "animal-print": "Animalier",
+    "argyle": "Argyle",
     "camouflage": "Mimetico",
     "checkered": "A quadretti",
+    "color-block": "Color block",
     "floral": "Floreale",
     "geometric": "Geometrico",
+    "gingham": "Vichy",
     "graphic": "Grafico",
+    "herringbone": "Spigato",
+    "houndstooth": "Pied-de-poule",
+    "paisley": "Paisley",
+    "pinstripe": "Gessato",
     "plaid": "Scozzese",
     "polka-dot": "A pois",
     "solid": "Tinta unita",
-    "striped": "A righe"
+    "striped": "A righe",
+    "tie-dye": "Tie-dye"
   },
   "roles": {
     "accessory": "Accessorio",
