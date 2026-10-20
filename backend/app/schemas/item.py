@@ -314,7 +314,9 @@ class BulkDeleteResponse(BulkBatchResponse):
 
 
 class BulkAnalyzeRequest(BulkSelectionRequest):
-    pass
+    # Overwrite the AI's earlier tags, keeping any a person edited, instead of only
+    # filling the empty ones. See POST /items/{id}/analyze.
+    replace: bool = False
 
 
 class BulkAnalyzeResponse(BulkBatchResponse):

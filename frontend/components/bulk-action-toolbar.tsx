@@ -14,6 +14,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useTranslations } from 'next-intl';
+import { BulkReplaceAnalysisButton } from '@/components/bulk-replace-analysis-button';
 
 export interface BulkSelection {
   mode: 'none' | 'some' | 'all';
@@ -32,6 +33,7 @@ interface BulkActionToolbarProps {
   onClear: () => void;
   onDelete: () => void;
   onReanalyze?: () => void;
+  onReanalyzeReplace?: () => void;
   onRotate?: (direction: 'cw' | 'ccw') => void;
   onRemoveBackground?: () => void;
   isDeleting?: boolean;
@@ -57,6 +59,7 @@ export function BulkActionToolbar({
   onClear,
   onDelete,
   onReanalyze,
+  onReanalyzeReplace,
   onRotate,
   onRemoveBackground,
   isDeleting = false,
@@ -171,6 +174,13 @@ export function BulkActionToolbar({
                 <RefreshCw className="h-4 w-4" />
               )}
             </Button>
+          )}
+          {onReanalyzeReplace && (
+            <BulkReplaceAnalysisButton
+              count={selectedCount}
+              pending={isReanalyzing}
+              onConfirm={onReanalyzeReplace}
+            />
           )}
           {onRotate && (
             <>

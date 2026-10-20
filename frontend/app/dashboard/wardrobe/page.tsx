@@ -570,10 +570,10 @@ export default function WardrobePage() {
     }
   };
 
-  const handleBulkReanalyze = async () => {
+  const handleBulkReanalyze = async (replace = false) => {
     const params = getBulkParams();
     try {
-      const result = await bulkReanalyze.mutateAsync(params);
+      const result = await bulkReanalyze.mutateAsync(replace ? { ...params, replace: true } : params);
       if (result.queued > 0) {
         if (result.queued > 20) {
           toast.success(t('bulkActions.reanalyzeMany', { count: result.queued }));
@@ -937,7 +937,8 @@ export default function WardrobePage() {
         onSelectAllMatching={handleSelectAllMatching}
         onClear={handleClearSelection}
         onDelete={handleBulkDelete}
-        onReanalyze={handleBulkReanalyze}
+        onReanalyze={() => handleBulkReanalyze()}
+        onReanalyzeReplace={() => handleBulkReanalyze(true)}
         onRotate={handleBulkRotate}
         onRemoveBackground={handleBulkRemoveBackground}
         isDeleting={bulkDelete.isPending}

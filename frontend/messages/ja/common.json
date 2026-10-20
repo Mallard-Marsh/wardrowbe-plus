@@ -11,6 +11,7 @@
     "clearSelection": "選択をクリア",
     "noneSelected": "未選択",
     "reanalyze": "再分析",
+    "reanalyzeAndReplace": "AIタグを再分析して置き換える",
     "removeBackground": "Remove background",
     "rotateCcw": "Rotate left",
     "rotateCw": "Rotate right",
