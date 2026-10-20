@@ -13,6 +13,7 @@ import { type Outfit } from '@/lib/hooks/use-outfits';
 import { useCurrentFamilyMember, useFamily } from '@/lib/hooks/use-family';
 import { useRotateImage } from '@/lib/hooks/use-items';
 import { FamilyRatingForm, FamilyRatingsDisplay } from '@/components/family-ratings';
+import { FlatLayView } from '@/components/outfits/flat-lay-view';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { useLocale, useTranslations } from 'next-intl';
@@ -51,6 +52,7 @@ export function OutfitPreviewDialog({ outfit, open, onClose, isOwner = true }: O
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imageKey, setImageKey] = useState(0); // Force image reload after rotation
   const [showRatingForm, setShowRatingForm] = useState(false);
+  const [view, setView] = useState<'items' | 'flatLay'>('items');
   const items = outfit.items;
   const rotateImage = useRotateImage();
   const { data: family } = useFamily();
@@ -107,6 +109,27 @@ export function OutfitPreviewDialog({ outfit, open, onClose, isOwner = true }: O
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="flex gap-1 border-b p-2" role="group" aria-label={t('view')}>
+            {(['items', 'flatLay'] as const).map((v) => (
+              <Button
+                key={v}
+                type="button"
+                size="sm"
+                variant={view === v ? 'secondary' : 'ghost'}
+                className="h-7 text-xs"
+                aria-pressed={view === v}
+                onClick={() => setView(v)}
+              >
+                {t(v === 'items' ? 'viewItems' : 'viewFlatLay')}
+              </Button>
+            ))}
+          </div>
+
+          {view === 'flatLay' && (
+            <FlatLayView outfitId={outfit.id} items={items} isOwner={isOwner} />
+          )}
+
+          {view === 'items' && (<>
           {/* Main image area */}
           <div className="relative bg-muted">
             <Link href={`/dashboard/wardrobe?item=${currentItem.id}`} className="block">
@@ -254,6 +277,8 @@ export function OutfitPreviewDialog({ outfit, open, onClose, isOwner = true }: O
               </div>
             </div>
           )}
+
+          </>)}
 
           {/* Outfit details section */}
           {(outfit.reasoning || outfit.highlights || outfit.style_notes) && (
