@@ -36,6 +36,7 @@ export function BulkReplaceAnalysisButton({ count, pending = false, onConfirm }:
           className="h-8 w-8 shrink-0"
           disabled={pending}
           aria-label={t('bulkActions.reanalyzeAndReplace')}
+          title={t('bulkActions.reanalyzeAndReplace')}
         >
           {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Replace className="h-4 w-4" />}
         </Button>
