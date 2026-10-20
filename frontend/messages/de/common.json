@@ -11,6 +11,7 @@
     "clearSelection": "Auswahl aufheben",
     "noneSelected": "Nichts ausgewählt",
     "reanalyze": "Erneut analysieren",
+    "reanalyzeAndReplace": "KI-Tags neu analysieren und ersetzen",
     "removeBackground": "Remove background",
     "rotateCcw": "Rotate left",
     "rotateCw": "Rotate right",

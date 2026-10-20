@@ -39,6 +39,8 @@
   },
   "materials": {
     "canvas": "帆布",
+    "cashmere": "羊绒",
+    "corduroy": "灯芯绒",
     "cotton": "棉",
     "denim": "牛仔布",
     "down": "羽绒",
@@ -48,9 +50,11 @@
     "linen": "亚麻",
     "nylon": "尼龙",
     "polyester": "聚酯纤维",
+    "satin": "缎面",
     "shearling": "羊剪绒",
     "silk": "丝绸",
     "suede": "麂皮",
+    "tweed": "粗花呢",
     "velvet": "天鹅绒",
     "wool": "羊毛"
   },
@@ -87,15 +91,23 @@
   },
   "patterns": {
     "animal-print": "动物纹",
+    "argyle": "菱形格",
     "camouflage": "迷彩",
     "checkered": "方格",
+    "color-block": "撞色拼接",
     "floral": "花卉",
     "geometric": "几何",
+    "gingham": "小方格",
     "graphic": "图案印花",
+    "herringbone": "人字纹",
+    "houndstooth": "千鸟格",
+    "paisley": "佩斯利花纹",
+    "pinstripe": "细条纹",
     "plaid": "格纹",
     "polka-dot": "波点",
     "solid": "纯色",
-    "striped": "条纹"
+    "striped": "条纹",
+    "tie-dye": "扎染"
   },
   "roles": {
     "accessory": "配饰",

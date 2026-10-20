@@ -11,6 +11,7 @@
     "clearSelection": "Clear selection",
     "noneSelected": "None selected",
     "reanalyze": "Re-analyze",
+    "reanalyzeAndReplace": "Re-analyze and replace AI tags",
     "removeBackground": "Remove background",
     "rotateCcw": "Rotate left",
     "rotateCw": "Rotate right",
