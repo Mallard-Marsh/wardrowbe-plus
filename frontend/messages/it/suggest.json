@@ -69,13 +69,27 @@
       "rate": "Valuta",
       "title": "Valutazioni famiglia"
     },
+    "flatLay": {
+      "alt": "Immagine flat lay del completo",
+      "download": "Scarica",
+      "downloadFailed": "Impossibile salvare l'immagine",
+      "loadFailed": "Impossibile caricare le immagini",
+      "portrait": "Verticale 4:5",
+      "preparing": "Ritaglio dei capi in corso…",
+      "shape": "Formato dell'immagine",
+      "someMissing": "Alcuni capi non si sono potuti ritagliare, quindi le loro foto vengono mostrate così come sono.",
+      "square": "Quadrato"
+    },
     "imageRotated": "Immagine ruotata",
     "noImage": "Nessuna immagine",
     "rotateFailed": "Rotazione immagine fallita",
     "rotateLeft": "Ruota a sinistra",
     "rotateRight": "Ruota a destra",
     "title": "Outfit {occasion}",
-    "viewItemDetails": "Vedi dettagli capo"
+    "view": "Vista",
+    "viewFlatLay": "Flat lay",
+    "viewItemDetails": "Vedi dettagli capo",
+    "viewItems": "Capi"
   },
   "startOver": "Ricomincia",
   "subtitle": "Troviamo l'outfit perfetto per la tua giornata",
