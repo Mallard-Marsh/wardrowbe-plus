@@ -69,13 +69,27 @@
       "rate": "Rate",
       "title": "Family Ratings"
     },
+    "flatLay": {
+      "alt": "Flat lay picture of the outfit",
+      "download": "Download",
+      "downloadFailed": "Couldn't save the picture",
+      "loadFailed": "Couldn't load the pictures",
+      "portrait": "Portrait 4:5",
+      "preparing": "Cutting out your pieces…",
+      "shape": "Picture shape",
+      "someMissing": "Some pieces couldn't be cut out, so their photos are shown as they are.",
+      "square": "Square"
+    },
     "imageRotated": "Image rotated",
     "noImage": "No image",
     "rotateFailed": "Failed to rotate image",
     "rotateLeft": "Rotate left",
     "rotateRight": "Rotate right",
     "title": "{occasion} Outfit",
-    "viewItemDetails": "View item details"
+    "view": "View",
+    "viewFlatLay": "Flat lay",
+    "viewItemDetails": "View item details",
+    "viewItems": "Items"
   },
   "startOver": "Start over",
   "subtitle": "Let's find the perfect outfit for your day",
