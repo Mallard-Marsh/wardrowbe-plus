@@ -69,13 +69,27 @@
       "rate": "평가",
       "title": "가족 평가"
     },
+    "flatLay": {
+      "alt": "코디 플랫레이 이미지",
+      "download": "다운로드",
+      "downloadFailed": "이미지를 저장하지 못했습니다",
+      "loadFailed": "이미지를 불러오지 못했습니다",
+      "portrait": "세로 4:5",
+      "preparing": "아이템을 오려내는 중…",
+      "shape": "이미지 형태",
+      "someMissing": "일부 아이템은 오려내지 못해 원본 사진 그대로 표시됩니다.",
+      "square": "정사각형"
+    },
     "imageRotated": "이미지가 회전되었어요",
     "noImage": "이미지 없음",
     "rotateFailed": "이미지 회전 실패",
     "rotateLeft": "왼쪽 회전",
     "rotateRight": "오른쪽 회전",
     "title": "{occasion} 코디",
-    "viewItemDetails": "아이템 상세보기"
+    "view": "보기",
+    "viewFlatLay": "플랫레이",
+    "viewItemDetails": "아이템 상세보기",
+    "viewItems": "아이템"
   },
   "startOver": "처음부터 다시",
   "subtitle": "오늘 하루에 딱 맞는 코디를 찾아볼까요",

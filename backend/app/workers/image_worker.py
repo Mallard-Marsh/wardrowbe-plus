@@ -2,7 +2,7 @@ import logging
 
 from app.config import get_settings
 from app.logging_config import configure_logging
-from app.workers.background_removal import remove_item_background_job
+from app.workers.background_removal import create_item_cutout_job, remove_item_background_job
 from app.workers.db import close_db, init_db
 from app.workers.queues import IMAGE_QUEUE
 from app.workers.rotation import rotate_item_image_job
@@ -34,6 +34,7 @@ class ImageWorkerSettings:
     functions = [
         rotate_item_image_job,
         remove_item_background_job,
+        create_item_cutout_job,
     ]
 
     on_startup = startup

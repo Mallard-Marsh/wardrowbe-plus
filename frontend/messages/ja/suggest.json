@@ -69,13 +69,27 @@
       "rate": "評価",
       "title": "ファミリー評価"
     },
+    "flatLay": {
+      "alt": "コーディネートのフラットレイ画像",
+      "download": "ダウンロード",
+      "downloadFailed": "画像を保存できませんでした",
+      "loadFailed": "画像を読み込めませんでした",
+      "portrait": "縦長 4:5",
+      "preparing": "アイテムを切り抜いています…",
+      "shape": "画像の形",
+      "someMissing": "一部のアイテムは切り抜けなかったため、元の写真をそのまま表示しています。",
+      "square": "正方形"
+    },
     "imageRotated": "画像を回転しました",
     "noImage": "画像なし",
     "rotateFailed": "画像の回転に失敗しました",
     "rotateLeft": "左に回転",
     "rotateRight": "右に回転",
     "title": "{occasion}コーデ",
-    "viewItemDetails": "アイテム詳細を見る"
+    "view": "表示",
+    "viewFlatLay": "フラットレイ",
+    "viewItemDetails": "アイテム詳細を見る",
+    "viewItems": "アイテム"
   },
   "startOver": "最初から",
   "subtitle": "今日にぴったりのコーデを見つけましょう",

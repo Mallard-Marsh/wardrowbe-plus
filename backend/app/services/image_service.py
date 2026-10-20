@@ -1,3 +1,4 @@
+import logging
 import shutil
 import uuid
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from app.config import get_settings
 from app.services import background_removal
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -34,6 +36,14 @@ VARIANTS = (
     ImageVariant("thumbnail_path", "_thumb", 400, 88),
 )
 ORIGINAL = VARIANTS[0]
+
+# Cut-outs are drawn into flat-lay pictures about 500px wide, so 1000px is plenty and keeps the
+# PNGs small. A pixel counts as garment above this alpha, and a cut-out smaller than this share of
+# the photo is treated as "nothing found".
+CUTOUT_MAX_PX = 1000
+CUTOUT_ALPHA_THRESHOLD = 16
+CUTOUT_MIN_AREA = 0.02
+CUTOUT_PADDING = 0.02
 
 IMAGE_MIME_TYPES = {
     ".jpg": "image/jpeg",
@@ -171,6 +181,65 @@ class ImageService:
                 full_path = self.storage_path / path
                 if full_path.exists():
                     full_path.unlink()
+        # The cut-out is found by file name rather than stored, so it is removed with the
+        # photo it was made from (delete, and replace-image which deletes the old paths).
+        main = paths.get("image_path")
+        if main:
+            cutout = self.storage_path / self.cutout_path(main)
+            if cutout.exists():
+                cutout.unlink()
+
+    @staticmethod
+    def cutout_path(image_path: str) -> str:
+        """Where an item's transparent cut-out lives, whether or not it exists yet."""
+        return f"{image_path.rsplit('.', 1)[0]}_cutout.png"
+
+    def existing_cutout(self, image_path: str | None) -> str | None:
+        if not image_path:
+            return None
+        path = self.cutout_path(image_path)
+        return path if (self.storage_path / path).exists() else None
+
+    def save_cutout(self, cutout: Image.Image, image_path: str) -> str:
+        """Trim a background-removed RGBA photo to the garment and store it as a PNG.
+
+        Raises ValueError when no garment was found (everything transparent, or only a speck).
+        """
+        rgba = cutout.convert("RGBA")
+        alpha = rgba.getchannel("A")
+        box = alpha.point(lambda a: 255 if a > CUTOUT_ALPHA_THRESHOLD else 0).getbbox()
+        if box is None:
+            raise ValueError("No garment found in the photo")
+        left, top, right, bottom = box
+        if (right - left) * (bottom - top) < CUTOUT_MIN_AREA * rgba.width * rgba.height:
+            raise ValueError("No garment found in the photo")
+
+        pad = round(max(right - left, bottom - top) * CUTOUT_PADDING)
+        trimmed = rgba.crop(
+            (
+                max(left - pad, 0),
+                max(top - pad, 0),
+                min(right + pad, rgba.width),
+                min(bottom + pad, rgba.height),
+            )
+        )
+        trimmed.thumbnail((CUTOUT_MAX_PX, CUTOUT_MAX_PX), Image.Resampling.LANCZOS)
+
+        path = self.cutout_path(image_path)
+        target = self.storage_path / path
+        # Written beside the target and moved into place so a reader never sees half a file.
+        partial = target.with_name(f"{target.name}.partial")
+        trimmed.save(partial, format="PNG")
+        partial.replace(target)
+        return path
+
+    def create_cutout(self, image_path: str) -> str:
+        """Cut the garment out of an item's stored photo (the slow part is the model)."""
+        source = self.storage_path / image_path
+        if not source.exists():
+            raise ValueError(f"Image not found: {image_path}")
+        image = _flatten_to_rgb(Image.open(source))
+        return self.save_cutout(background_removal.get_provider().remove(image), image_path)
 
     def validate_image(self, image_data: bytes, content_type: str) -> bool:
         """Validate image data and content type."""
@@ -269,6 +338,13 @@ class ImageService:
         provider = background_removal.get_provider()
         result = provider.remove(image)
 
+        # The model's transparent result is exactly what a flat-lay picture needs, and it is lost
+        # once the garment is flattened onto a colour below. Never let this fail the removal.
+        try:
+            self.save_cutout(result, image_path)
+        except Exception as e:
+            logger.warning(f"Could not save a cut-out for {image_path}: {e}")
+
         # Composite onto solid color background
         background = Image.new("RGBA", result.size, (*bg_color, 255))
         background.paste(result, mask=result.split()[3])
@@ -309,5 +385,12 @@ class ImageService:
         image = _flatten_to_rgb(Image.open(original_full))
 
         rotated = image.rotate(angle, expand=True)
+        paths = self._save_all_sizes(rotated, image_path)
 
-        return self._save_all_sizes(rotated, image_path)
+        cutout_file = self.storage_path / self.cutout_path(image_path)
+        if cutout_file.exists():
+            with Image.open(cutout_file) as cutout:
+                turned = cutout.convert("RGBA").rotate(angle, expand=True)
+            turned.save(cutout_file, format="PNG")
+
+        return paths
