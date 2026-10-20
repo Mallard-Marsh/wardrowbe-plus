@@ -39,6 +39,8 @@
   },
   "materials": {
     "canvas": "キャンバス",
+    "cashmere": "カシミヤ",
+    "corduroy": "コーデュロイ",
     "cotton": "コットン",
     "denim": "デニム",
     "down": "ダウン",
@@ -48,9 +50,11 @@
     "linen": "リネン",
     "nylon": "ナイロン",
     "polyester": "ポリエステル",
+    "satin": "サテン",
     "shearling": "シアリング",
     "silk": "シルク",
     "suede": "スエード",
+    "tweed": "ツイード",
     "velvet": "ベルベット",
     "wool": "ウール"
   },
@@ -87,15 +91,23 @@
   },
   "patterns": {
     "animal-print": "アニマル柄",
+    "argyle": "アーガイル",
     "camouflage": "迷彩",
     "checkered": "チェッカー",
+    "color-block": "カラーブロック",
     "floral": "花柄",
     "geometric": "幾何学柄",
+    "gingham": "ギンガムチェック",
     "graphic": "グラフィック",
+    "herringbone": "ヘリンボーン",
+    "houndstooth": "千鳥格子",
+    "paisley": "ペイズリー",
+    "pinstripe": "ピンストライプ",
     "plaid": "タータンチェック",
     "polka-dot": "ドット",
     "solid": "無地",
-    "striped": "ストライプ"
+    "striped": "ストライプ",
+    "tie-dye": "タイダイ"
   },
   "roles": {
     "accessory": "アクセサリー",

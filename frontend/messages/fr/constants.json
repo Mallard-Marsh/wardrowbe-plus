@@ -39,6 +39,8 @@
   },
   "materials": {
     "canvas": "Toile",
+    "cashmere": "Cachemire",
+    "corduroy": "Velours côtelé",
     "cotton": "Coton",
     "denim": "Denim",
     "down": "Duvet",
@@ -48,9 +50,11 @@
     "linen": "Lin",
     "nylon": "Nylon",
     "polyester": "Polyester",
+    "satin": "Satin",
     "shearling": "Mouton retourné",
     "silk": "Soie",
     "suede": "Daim",
+    "tweed": "Tweed",
     "velvet": "Velours",
     "wool": "Laine"
   },
@@ -87,15 +91,23 @@
   },
   "patterns": {
     "animal-print": "Imprimé animal",
+    "argyle": "Argyle",
     "camouflage": "Camouflage",
     "checkered": "À carreaux",
+    "color-block": "Color block",
     "floral": "Fleuri",
     "geometric": "Géométrique",
+    "gingham": "Vichy",
     "graphic": "Graphique",
+    "herringbone": "Chevrons",
+    "houndstooth": "Pied-de-poule",
+    "paisley": "Paisley",
+    "pinstripe": "Fines rayures",
     "plaid": "Écossais",
     "polka-dot": "À pois",
     "solid": "Uni",
-    "striped": "Rayé"
+    "striped": "Rayé",
+    "tie-dye": "Tie-dye"
   },
   "roles": {
     "accessory": "Accessoire",
