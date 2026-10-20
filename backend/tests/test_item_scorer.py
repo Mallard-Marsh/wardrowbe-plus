@@ -115,6 +115,16 @@ class TestWeatherScore:
         item = _item(type="jacket")
         assert _weather_score(item, _weather(temp=18, precipitation=60), None) == 1.0
 
+    @pytest.mark.parametrize("material", ["wool", "fleece", "knit", "tweed", "cashmere"])
+    def test_cold_weather_favours_every_warm_material(self, material):
+        item = _item(type="shirt", material=material)
+        assert _weather_score(item, _weather(temp=5), None) == 1.0
+
+    @pytest.mark.parametrize("material", ["cotton", "satin", "corduroy"])
+    def test_other_materials_are_not_treated_as_warm(self, material):
+        item = _item(type="shirt", material=material)
+        assert _weather_score(item, _weather(temp=5), None) == 0.7
+
     def test_cold_wool_scores_high(self):
         item = _item(type="shirt", material="wool")
         assert _weather_score(item, _weather(temp=5), None) == 1.0

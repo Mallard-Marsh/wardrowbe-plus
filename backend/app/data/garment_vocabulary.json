@@ -34,9 +34,9 @@
     {"value": "bag", "role": "accessory", "wash_interval": 20},
     {"value": "accessories", "role": "accessory", "wash_interval": 20}
   ],
-  "materials": ["cotton", "denim", "leather", "wool", "polyester", "silk", "linen", "knit", "fleece", "suede", "velvet", "nylon", "canvas", "down", "shearling"],
+  "materials": ["cotton", "denim", "leather", "wool", "polyester", "silk", "linen", "knit", "fleece", "suede", "velvet", "nylon", "canvas", "down", "shearling", "tweed", "corduroy", "cashmere", "satin"],
   "formality": ["very-casual", "casual", "smart-casual", "business-casual", "formal", "very-formal"],
-  "patterns": ["solid", "striped", "plaid", "checkered", "floral", "graphic", "geometric", "polka-dot", "camouflage", "animal-print"],
+  "patterns": ["solid", "striped", "plaid", "checkered", "floral", "graphic", "geometric", "polka-dot", "camouflage", "animal-print", "herringbone", "houndstooth", "pinstripe", "gingham", "paisley", "argyle", "color-block", "tie-dye"],
   "styles": ["casual", "classic", "sporty", "minimalist", "bohemian", "preppy", "streetwear", "elegant", "athletic", "vintage", "modern", "rugged"],
   "seasons": ["spring", "summer", "fall", "winter", "all-season"],
   "fits": ["slim", "regular", "relaxed", "oversized", "tailored", "cropped"],

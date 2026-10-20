@@ -587,6 +587,8 @@ async def bulk_analyze_items(
     queued = 0
     failed = 0
     errors: list[str] = []
+    # Only sent when replacing, so a plain bulk analysis enqueues exactly what it always did.
+    job_options = {"replace": True} if request.replace else {}
 
     # Get item IDs to analyze
     item_ids, next_cursor, has_more = await _resolve_bulk_item_ids(
@@ -709,6 +711,7 @@ async def bulk_analyze_items(
                     full_image_path,
                     _job_id=job_id,
                     _queue_name=TAGGING_QUEUE,
+                    **job_options,
                 )
                 if job is None:
                     raise RuntimeError("enqueue_job returned None")

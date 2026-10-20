@@ -25,9 +25,11 @@ PRIMARY_COLOR (required, pick one):
 
 PATTERN (required, pick one):
 <<PATTERNS>>
+Pattern notes: pinstripe is thin, widely spaced lines, typical of tailoring, and striped is any other stripe. Herringbone is a woven zig-zag of V shapes, houndstooth is broken, jagged checks, gingham is small even two-colour checks, plaid is tartan or large overlapping checks, and checkered is plain squares. A fabric of one uniform colour with no repeating motif is solid.
 
 MATERIAL (optional, pick one or null):
 <<MATERIALS>>
+Material notes: tweed is a rough, flecked woolen cloth (jackets, blazers, caps), corduroy has parallel ribs of pile, cashmere is a very soft fine knit, and satin is a smooth glossy weave.
 
 FORMALITY (required, pick one):
 <<FORMALITY>>

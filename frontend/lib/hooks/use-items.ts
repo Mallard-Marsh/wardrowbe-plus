@@ -803,12 +803,17 @@ export interface BulkAnalyzeResponse extends BulkBatchResponse {
   retry_after_seconds: number | null;
 }
 
+export interface BulkReanalyzeParams extends BulkOperationParams {
+  // Redo the AI's own earlier tags, keeping the ones a person edited, instead of only filling blanks.
+  replace?: boolean;
+}
+
 export function useBulkReanalyzeItems() {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
 
   return useMutation({
-    mutationFn: async (params: BulkOperationParams) => {
+    mutationFn: async (params: BulkReanalyzeParams) => {
       applySessionToken(session);
       const result = await drainBulkAction<BulkAnalyzeResponse>('/items/bulk/analyze', params, [
         'queued',
