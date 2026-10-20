@@ -39,6 +39,8 @@
   },
   "materials": {
     "canvas": "Canvas",
+    "cashmere": "Cashmere",
+    "corduroy": "Corduroy",
     "cotton": "Cotton",
     "denim": "Denim",
     "down": "Down",
@@ -48,9 +50,11 @@
     "linen": "Linen",
     "nylon": "Nylon",
     "polyester": "Polyester",
+    "satin": "Satin",
     "shearling": "Shearling",
     "silk": "Silk",
     "suede": "Suede",
+    "tweed": "Tweed",
     "velvet": "Velvet",
     "wool": "Wool"
   },
@@ -87,15 +91,23 @@
   },
   "patterns": {
     "animal-print": "Animal Print",
+    "argyle": "Argyle",
     "camouflage": "Camouflage",
     "checkered": "Checkered",
+    "color-block": "Colour Block",
     "floral": "Floral",
     "geometric": "Geometric",
+    "gingham": "Gingham",
     "graphic": "Graphic",
+    "herringbone": "Herringbone",
+    "houndstooth": "Houndstooth",
+    "paisley": "Paisley",
+    "pinstripe": "Pinstripe",
     "plaid": "Plaid",
     "polka-dot": "Polka Dot",
     "solid": "Solid",
-    "striped": "Striped"
+    "striped": "Striped",
+    "tie-dye": "Tie-Dye"
   },
   "roles": {
     "accessory": "Accessory",
