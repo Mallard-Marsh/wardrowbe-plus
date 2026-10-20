@@ -69,13 +69,27 @@
       "rate": "Noter",
       "title": "Notes de la famille"
     },
+    "flatLay": {
+      "alt": "Image flat lay de la tenue",
+      "download": "Télécharger",
+      "downloadFailed": "Impossible d'enregistrer l'image",
+      "loadFailed": "Impossible de charger les images",
+      "portrait": "Portrait 4:5",
+      "preparing": "Détourage de vos pièces…",
+      "shape": "Format de l'image",
+      "someMissing": "Certaines pièces n'ont pas pu être détourées, leurs photos sont donc affichées telles quelles.",
+      "square": "Carré"
+    },
     "imageRotated": "Image pivotée",
     "noImage": "Pas d'image",
     "rotateFailed": "Échec de la rotation de l'image",
     "rotateLeft": "Rotation à gauche",
     "rotateRight": "Rotation à droite",
     "title": "Tenue {occasion}",
-    "viewItemDetails": "Voir les détails de l'article"
+    "view": "Affichage",
+    "viewFlatLay": "Flat lay",
+    "viewItemDetails": "Voir les détails de l'article",
+    "viewItems": "Pièces"
   },
   "startOver": "Recommencer",
   "subtitle": "Trouvons la tenue parfaite pour votre journée",

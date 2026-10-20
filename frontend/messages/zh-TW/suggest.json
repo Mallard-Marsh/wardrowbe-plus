@@ -69,13 +69,27 @@
       "rate": "評分",
       "title": "家庭評分"
     },
+    "flatLay": {
+      "alt": "搭配的平拍圖",
+      "download": "下載",
+      "downloadFailed": "無法儲存圖片",
+      "loadFailed": "無法載入圖片",
+      "portrait": "直式 4:5",
+      "preparing": "正在去背單品…",
+      "shape": "圖片形狀",
+      "someMissing": "部分單品無法去背，將依原照片顯示。",
+      "square": "方形"
+    },
     "imageRotated": "圖片已旋轉",
     "noImage": "無圖片",
     "rotateFailed": "旋轉圖片失敗",
     "rotateLeft": "向左旋轉",
     "rotateRight": "向右旋轉",
     "title": "{occasion} 穿搭",
-    "viewItemDetails": "查看單品詳情"
+    "view": "檢視",
+    "viewFlatLay": "平拍圖",
+    "viewItemDetails": "查看單品詳情",
+    "viewItems": "單品"
   },
   "startOver": "重新開始",
   "subtitle": "為你的一天找到完美穿搭",

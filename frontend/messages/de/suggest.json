@@ -69,13 +69,27 @@
       "rate": "Bewerten",
       "title": "Familienbewertungen"
     },
+    "flatLay": {
+      "alt": "Flat-Lay-Bild des Outfits",
+      "download": "Herunterladen",
+      "downloadFailed": "Das Bild konnte nicht gespeichert werden",
+      "loadFailed": "Die Bilder konnten nicht geladen werden",
+      "portrait": "Hochformat 4:5",
+      "preparing": "Teile werden freigestellt…",
+      "shape": "Bildformat",
+      "someMissing": "Einige Teile konnten nicht freigestellt werden, daher werden ihre Fotos unverändert gezeigt.",
+      "square": "Quadrat"
+    },
     "imageRotated": "Bild gedreht",
     "noImage": "Kein Bild",
     "rotateFailed": "Bild konnte nicht gedreht werden",
     "rotateLeft": "Nach links drehen",
     "rotateRight": "Nach rechts drehen",
     "title": "{occasion}-Outfit",
-    "viewItemDetails": "Stückdetails ansehen"
+    "view": "Ansicht",
+    "viewFlatLay": "Flat Lay",
+    "viewItemDetails": "Stückdetails ansehen",
+    "viewItems": "Teile"
   },
   "startOver": "Neu beginnen",
   "subtitle": "Finden wir das perfekte Outfit für deinen Tag",
