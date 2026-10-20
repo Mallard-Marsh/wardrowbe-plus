@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.analytics import router as analytics_router
 from app.api.auth import router as auth_router
 from app.api.families import router as families_router
+from app.api.flat_lay import router as flat_lay_router
 from app.api.health import router as health_router
 from app.api.images import router as images_router
 from app.api.items import router as items_router
@@ -28,6 +29,7 @@ api_router.include_router(preferences_router)
 api_router.include_router(families_router)
 api_router.include_router(weather_router)
 api_router.include_router(outfits_router)
+api_router.include_router(flat_lay_router)
 api_router.include_router(pairings_router)
 api_router.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(analytics_router)
