@@ -286,6 +286,8 @@ export interface OutfitItem {
   thumbnail_path: string | null;
   image_url: string | null;
   thumbnail_url: string | null;
+  /** Transparent cut-out a flat-lay picture is drawn from; null until one has been made. */
+  cutout_url?: string | null;
   layer_type: string | null;
   position: number;
 }
