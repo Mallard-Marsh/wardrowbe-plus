@@ -30,6 +30,7 @@ from app.schemas.outfit import (
 )
 from app.services.ai_service import AIDisabledError
 from app.services.external_outfit_service import ExternalOutfitService
+from app.services.image_service import ImageService
 from app.services.item_service import ItemService
 from app.services.learning_service import LearningService
 from app.services.outfit_service import OutfitListFilters, OutfitService
@@ -92,6 +93,8 @@ class OutfitItemResponse(BaseModel):
     colors: list[str] = []
     image_path: str | None = None
     thumbnail_path: str | None = None
+    # Transparent cut-out a flat-lay picture is drawn from; None until one has been made.
+    cutout_path: str | None = None
     layer_type: str | None = None
     position: int
 
@@ -99,6 +102,11 @@ class OutfitItemResponse(BaseModel):
     @property
     def image_url(self) -> str | None:
         return sign_optional(self.image_path)
+
+    @computed_field
+    @property
+    def cutout_url(self) -> str | None:
+        return sign_optional(self.cutout_path)
 
     @computed_field
     @property
@@ -316,6 +324,7 @@ def outfit_to_response(
     is_starter_suggestion: bool = False,
 ) -> OutfitResponse:
     items = []
+    image_service = ImageService()
     for outfit_item in sorted(outfit.items, key=lambda x: x.position):
         item = outfit_item.item
         items.append(
@@ -328,6 +337,7 @@ def outfit_to_response(
                 colors=item.colors or [],
                 image_path=item.image_path,
                 thumbnail_path=item.thumbnail_path,
+                cutout_path=image_service.existing_cutout(item.image_path),
                 layer_type=outfit_item.layer_type,
                 position=outfit_item.position,
             )

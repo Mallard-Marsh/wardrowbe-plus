@@ -69,13 +69,27 @@
       "rate": "评分",
       "title": "家庭评分"
     },
+    "flatLay": {
+      "alt": "搭配的平铺图",
+      "download": "下载",
+      "downloadFailed": "无法保存图片",
+      "loadFailed": "无法加载图片",
+      "portrait": "竖版 4:5",
+      "preparing": "正在抠出单品…",
+      "shape": "图片形状",
+      "someMissing": "部分单品无法抠图，将按原照片显示。",
+      "square": "方形"
+    },
     "imageRotated": "图片已旋转",
     "noImage": "无图片",
     "rotateFailed": "旋转图片失败",
     "rotateLeft": "向左旋转",
     "rotateRight": "向右旋转",
     "title": "{occasion}穿搭",
-    "viewItemDetails": "查看单品详情"
+    "view": "视图",
+    "viewFlatLay": "平铺图",
+    "viewItemDetails": "查看单品详情",
+    "viewItems": "单品"
   },
   "startOver": "重新开始",
   "subtitle": "让我们为你找到今天的完美穿搭",

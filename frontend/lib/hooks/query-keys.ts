@@ -55,6 +55,7 @@ export const queryKeys = {
       [...OUTFITS, 'infinite', filters, pageSize] as const,
   },
   outfit: (outfitId: string) => ['outfit', outfitId] as const,
+  flatLayOutfit: (outfitId: string) => ['flat-lay', outfitId] as const,
   calendarOutfits: {
     all: CALENDAR_OUTFITS,
     month: (year: number, month: number, filters: OutfitFilters) =>
