@@ -155,6 +155,7 @@ export function BulkActionToolbar({
             onClick={onClear}
             className="text-muted-foreground h-8 w-8 shrink-0"
             aria-label={t('bulkActions.clearSelection')}
+            title={t('bulkActions.clearSelection')}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -167,6 +168,7 @@ export function BulkActionToolbar({
               onClick={onReanalyze}
               disabled={isReanalyzing}
               aria-label={t('bulkActions.reanalyze')}
+              title={t('bulkActions.reanalyze')}
             >
               {isReanalyzing ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -191,6 +193,7 @@ export function BulkActionToolbar({
                 onClick={() => onRotate('ccw')}
                 disabled={isRotating}
                 aria-label={t('bulkActions.rotateCcw')}
+                title={t('bulkActions.rotateCcw')}
               >
                 {isRotating ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -205,6 +208,7 @@ export function BulkActionToolbar({
                 onClick={() => onRotate('cw')}
                 disabled={isRotating}
                 aria-label={t('bulkActions.rotateCw')}
+                title={t('bulkActions.rotateCw')}
               >
                 {isRotating ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -223,6 +227,7 @@ export function BulkActionToolbar({
                   className="h-8 w-8 shrink-0"
                   disabled={isRemovingBackground}
                   aria-label={t('bulkActions.removeBackground')}
+                  title={t('bulkActions.removeBackground')}
                 >
                   {isRemovingBackground ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -253,7 +258,7 @@ export function BulkActionToolbar({
           )}
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="icon" className="h-8 w-8 shrink-0" disabled={isDeleting} aria-label={t('delete')}>
+              <Button variant="destructive" size="icon" className="h-8 w-8 shrink-0" disabled={isDeleting} aria-label={t('delete')} title={t('delete')}>
                 {isDeleting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -298,6 +303,7 @@ export function BulkActionToolbar({
               disabled={pagination.page === 1}
               onClick={() => pagination.onPageChange(1)}
               aria-label={t('firstPage')}
+              title={t('firstPage')}
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
@@ -308,6 +314,7 @@ export function BulkActionToolbar({
               disabled={pagination.page === 1}
               onClick={() => pagination.onPageChange(pagination.page - 1)}
               aria-label={t('previousPage')}
+              title={t('previousPage')}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -321,6 +328,7 @@ export function BulkActionToolbar({
               disabled={pagination.page >= totalPages}
               onClick={() => pagination.onPageChange(pagination.page + 1)}
               aria-label={t('nextPage')}
+              title={t('nextPage')}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -331,6 +339,7 @@ export function BulkActionToolbar({
               disabled={pagination.page >= totalPages}
               onClick={() => pagination.onPageChange(totalPages)}
               aria-label={t('lastPage')}
+              title={t('lastPage')}
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>
