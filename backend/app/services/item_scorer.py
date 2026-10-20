@@ -81,6 +81,8 @@ RAIN_LIKELY_CHANCE = 50
 WARM_LAYER_TYPES = REMOVABLE_LAYER_TYPES | {"sweater"}
 HEAVY_LAYER_TYPES = {"coat"}
 HEAVY_LAYER_MATERIALS = {"wool", "fleece", "down", "shearling"}
+# Materials that read as warm in cold weather (and as a heat penalty in hot weather).
+WARM_MATERIALS = ("wool", "fleece", "knit", "tweed", "cashmere")
 HEAVY_LAYER_SUBTYPES = {
     "puffer",
     "parka",
@@ -126,12 +128,10 @@ def _temp_bucket_score(
     # Sheer and thermal tights serve different weather needs, so the type alone
     # must not mark every pair as a warm layer. The materials match the cold-weather
     # rule below so the heat penalty hits the same pairs the cold reward favours.
-    warm_tights = item_type == "tights" and (
-        subtype == "thermal" or material in ("wool", "fleece", "knit")
-    )
+    warm_tights = item_type == "tights" and (subtype == "thermal" or material in WARM_MATERIALS)
     band = _temp_band(temp, cold_threshold, hot_threshold)
     if band == "cold":
-        if warm_tights or item_type in WARM_LAYER_TYPES or material in ("wool", "fleece", "knit"):
+        if warm_tights or item_type in WARM_LAYER_TYPES or material in WARM_MATERIALS:
             return 1.0
         elif "winter" in seasons:
             return 1.0

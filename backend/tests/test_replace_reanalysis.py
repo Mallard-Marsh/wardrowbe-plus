@@ -408,3 +408,77 @@ class TestAnalyzeEndpoint:
         )
 
         assert response.status_code == 422
+
+
+class TestBulkAnalyzeReplace:
+    @pytest.mark.asyncio
+    async def test_replace_is_passed_to_every_job(
+        self, client: AsyncClient, test_user, auth_headers, db_session, item_image
+    ):
+        first = await _make_item(db_session, test_user, item_image)
+        second = await _make_item(db_session, test_user, item_image)
+        redis = _queue()
+
+        with patch("app.api.items.create_pool", new_callable=AsyncMock, return_value=redis):
+            response = await client.post(
+                "/api/v1/items/bulk/analyze",
+                headers=auth_headers,
+                json={"item_ids": [str(first.id), str(second.id)], "replace": True},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["queued"] == 2
+        assert redis.enqueue_job.call_count == 2
+        for call in redis.enqueue_job.call_args_list:
+            assert call.kwargs["replace"] is True
+
+    @pytest.mark.asyncio
+    async def test_a_plain_bulk_analysis_enqueues_exactly_what_it_always_did(
+        self, client: AsyncClient, test_user, auth_headers, db_session, item_image
+    ):
+        item = await _make_item(db_session, test_user, item_image)
+        redis = _queue()
+
+        with patch("app.api.items.create_pool", new_callable=AsyncMock, return_value=redis):
+            response = await client.post(
+                "/api/v1/items/bulk/analyze",
+                headers=auth_headers,
+                json={"item_ids": [str(item.id)]},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["queued"] == 1
+        assert "replace" not in redis.enqueue_job.call_args.kwargs
+
+    @pytest.mark.asyncio
+    async def test_select_all_with_replace_covers_the_whole_wardrobe(
+        self, client: AsyncClient, test_user, auth_headers, db_session, item_image
+    ):
+        for _ in range(3):
+            await _make_item(db_session, test_user, item_image)
+        redis = _queue()
+
+        with patch("app.api.items.create_pool", new_callable=AsyncMock, return_value=redis):
+            response = await client.post(
+                "/api/v1/items/bulk/analyze",
+                headers=auth_headers,
+                json={"select_all": True, "excluded_ids": [], "replace": True},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["queued"] == 3
+        assert all(call.kwargs["replace"] is True for call in redis.enqueue_job.call_args_list)
+
+    @pytest.mark.asyncio
+    async def test_replace_must_be_a_boolean(
+        self, client: AsyncClient, test_user, auth_headers, db_session, item_image
+    ):
+        item = await _make_item(db_session, test_user, item_image)
+
+        response = await client.post(
+            "/api/v1/items/bulk/analyze",
+            headers=auth_headers,
+            json={"item_ids": [str(item.id)], "replace": "maybe"},
+        )
+
+        assert response.status_code == 422

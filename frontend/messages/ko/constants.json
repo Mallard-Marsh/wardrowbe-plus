@@ -39,6 +39,8 @@
   },
   "materials": {
     "canvas": "캔버스",
+    "cashmere": "캐시미어",
+    "corduroy": "코듀로이",
     "cotton": "면",
     "denim": "데님",
     "down": "다운",
@@ -48,9 +50,11 @@
     "linen": "린넨",
     "nylon": "나일론",
     "polyester": "폴리에스터",
+    "satin": "새틴",
     "shearling": "시어링",
     "silk": "실크",
     "suede": "스웨이드",
+    "tweed": "트위드",
     "velvet": "벨벳",
     "wool": "울"
   },
@@ -87,15 +91,23 @@
   },
   "patterns": {
     "animal-print": "애니멀 프린트",
+    "argyle": "아가일",
     "camouflage": "카모플라주",
     "checkered": "체크",
+    "color-block": "컬러 블록",
     "floral": "플로럴",
     "geometric": "기하학 무늬",
+    "gingham": "깅엄",
     "graphic": "그래픽",
+    "herringbone": "헤링본",
+    "houndstooth": "하운드투스",
+    "paisley": "페이즐리",
+    "pinstripe": "핀스트라이프",
     "plaid": "플레이드",
     "polka-dot": "도트",
     "solid": "무지",
-    "striped": "스트라이프"
+    "striped": "스트라이프",
+    "tie-dye": "타이다이"
   },
   "roles": {
     "accessory": "액세서리",

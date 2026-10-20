@@ -1073,3 +1073,45 @@ class TestPreprocessImage:
     def test_settings_reject_out_of_range_values(self, overrides):
         with pytest.raises(ValidationError):
             Settings(**overrides)
+
+
+class TestNewPatternAndMaterialValues:
+    """Patterns and materials added to the vocabulary are accepted from the model and by edits."""
+
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            "herringbone",
+            "houndstooth",
+            "pinstripe",
+            "gingham",
+            "paisley",
+            "argyle",
+            "color-block",
+            "tie-dye",
+        ],
+    )
+    def test_the_tagger_keeps_the_new_patterns(self, pattern):
+        tags = AIService()._parse_tags_from_response(
+            f'{{"type": "blazer", "pattern": "{pattern}", "primary_color": "gray"}}'
+        )
+        assert tags.pattern == pattern
+
+    @pytest.mark.parametrize("material", ["tweed", "corduroy", "cashmere", "satin"])
+    def test_the_tagger_keeps_the_new_materials(self, material):
+        tags = AIService()._parse_tags_from_response(
+            f'{{"type": "blazer", "material": "{material}", "primary_color": "gray"}}'
+        )
+        assert tags.material == material
+
+    def test_an_unknown_pattern_is_still_dropped(self):
+        tags = AIService()._parse_tags_from_response(
+            '{"type": "blazer", "pattern": "swirly", "primary_color": "gray"}'
+        )
+        assert tags.pattern is None
+
+    def test_the_prompt_tells_similar_patterns_apart(self):
+        from app.services.ai_service import TAGGING_PROMPT
+
+        for hint in ("pinstripe", "herringbone", "houndstooth", "gingham", "tweed", "corduroy"):
+            assert hint in TAGGING_PROMPT
