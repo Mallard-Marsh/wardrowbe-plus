@@ -6,6 +6,7 @@ import {
   type FlatLayFormat,
   type FlatLayPlacement,
 } from '@/lib/flat-lay-layout'
+import { longSideCm } from '@/lib/flat-lay-sizes'
 
 const entry = (id: string, type: string, aspect = 0.8): FlatLayEntry => ({ id, type, aspect })
 
@@ -63,7 +64,7 @@ describe('layoutFlatLay', () => {
     }
   })
 
-  it('stacks the top above the bottom and puts outerwear, accessories and shoes beside them', () => {
+  it('stacks tops over bottoms and orders the side pieces outerwear, accessories, footwear', () => {
     const placed = layoutFlatLay(FULL_OUTFIT, 'portrait')
     const at = (id: string) => placed.find((p) => p.id === id)!
 
@@ -73,12 +74,72 @@ describe('layoutFlatLay', () => {
     expect(at('belt').y).toBeLessThan(at('shoes').y)
   })
 
-  it('gives shoes a smaller share than the trousers', () => {
-    const placed = layoutFlatLay(FULL_OUTFIT, 'square')
+  it('draws the jeans 3.5x longer than the sneakers when both have the same aspect', () => {
+    const placed = layoutFlatLay([entry('jeans', 'jeans', 1), entry('kicks', 'sneakers', 1)], 'square')
     const at = (id: string) => placed.find((p) => p.id === id)!
+    const longSide = (p: FlatLayPlacement) => Math.max(p.width, p.height)
 
-    expect(at('shoes').height).toBeLessThan(at('bottom').height)
+    expect(longSide(at('jeans')) / longSide(at('kicks'))).toBeCloseTo(105 / 30, 1)
   })
+
+  it('draws the shirt shorter than the jeans whatever the cut-out aspects', () => {
+    for (const shirtAspect of [0.5, 1, 2]) {
+      for (const jeansAspect of [0.5, 1, 2]) {
+        const placed = layoutFlatLay(
+          [entry('s', 'shirt', shirtAspect), entry('j', 'jeans', jeansAspect)],
+          'square',
+        )
+        const longSide = (id: string) => {
+          const p = placed.find((x) => x.id === id)!
+          return Math.max(p.width, p.height)
+        }
+        expect(longSide('s')).toBeLessThan(longSide('j'))
+      }
+    }
+  })
+
+  it('sizes an item by its type and aspect only, not by the picture pixels', () => {
+    const placed = layoutFlatLay([entry('a', 'jeans', 0.55), entry('b', 'jeans', 0.55)], 'square')
+    const [a, b] = placed
+
+    expect(a.width).toBeCloseTo(b.width, 5)
+    expect(a.height).toBeCloseTo(b.height, 5)
+  })
+
+  it('uses one shared scale for every item', () => {
+    const placed = layoutFlatLay(FULL_OUTFIT, 'portrait')
+    const ratios = placed.map((p) => {
+      const entry = FULL_OUTFIT.find((e) => e.id === p.id)!
+      return Math.max(p.width, p.height) / longSideCm(entry.type)
+    })
+
+    expect(Math.max(...ratios) / Math.min(...ratios)).toBeLessThanOrEqual(1.01)
+  })
+
+  it('does not blow up a lone small item past the upscale cap', () => {
+    const [hat] = layoutFlatLay([entry('hat', 'hat', 1)], 'square')
+    const capPx = ((0.85 * FLAT_LAY_SIZES.square.height) / 100) * longSideCm('hat')
+
+    expect(Math.max(hat.width, hat.height)).toBeLessThanOrEqual(capPx + 1e-6)
+  })
+
+  it.each(FORMATS)(
+    'lays out the screenshot outfit (shirt, jeans, sneakers) with the shoes smallest (%s)',
+    (format) => {
+      const outfit = [entry('shirt', 'shirt', 1), entry('jeans', 'jeans', 0.55), entry('sneakers', 'sneakers', 1.5)]
+      const placed = layoutFlatLay(outfit, format)
+      const at = (id: string) => placed.find((p) => p.id === id)!
+      const longSide = (id: string) => Math.max(at(id).width, at(id).height)
+
+      for (let i = 0; i < placed.length; i++) {
+        for (let j = i + 1; j < placed.length; j++) {
+          expect(overlaps(placed[i], placed[j])).toBe(false)
+        }
+      }
+      expect(longSide('sneakers')).toBeLessThan(longSide('shirt'))
+      expect(longSide('sneakers')).toBeLessThan(longSide('jeans'))
+    },
+  )
 
   it('centres a single item', () => {
     const [only] = layoutFlatLay([entry('dress', 'dress', 0.6)], 'square')
