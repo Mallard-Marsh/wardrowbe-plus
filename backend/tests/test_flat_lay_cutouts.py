@@ -5,6 +5,7 @@ from io import BytesIO
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import numpy as np
 import pytest
 from httpx import AsyncClient
 from PIL import Image
@@ -28,6 +29,38 @@ def _garment_on_transparent(box=(100, 150, 300, 450)) -> Image.Image:
     """What the background model returns: a coloured garment on a fully transparent canvas."""
     image = Image.new("RGBA", SIZE, (0, 0, 0, 0))
     image.paste(Image.new("RGBA", (box[2] - box[0], box[3] - box[1]), (200, 30, 30, 255)), box[:2])
+    return image
+
+
+def _garment_with_stray_blob() -> Image.Image:
+    """The garment plus a small distant blob, as when another item's edge is in the photo."""
+    image = _garment_on_transparent()
+    image.paste(Image.new("RGBA", (20, 20), (0, 200, 200, 255)), (350, 550))
+    return image
+
+
+def _pair_of_shoes() -> Image.Image:
+    """Two similar-sized blobs, as a pair of shoes is."""
+    image = Image.new("RGBA", SIZE, (0, 0, 0, 0))
+    image.paste(Image.new("RGBA", (80, 120), (200, 30, 30, 255)), (100, 200))
+    image.paste(Image.new("RGBA", (80, 120), (200, 30, 30, 255)), (200, 200))
+    return image
+
+
+def _garment_with_holes() -> Image.Image:
+    """The garment with a pin-hole and a real gap, as the gap between trouser legs is."""
+    image = _garment_on_transparent()
+    image.paste(Image.new("RGBA", (4, 4), (0, 0, 0, 0)), (200, 300))
+    image.paste(Image.new("RGBA", (60, 60), (0, 0, 0, 0)), (220, 200))
+    return image
+
+
+def _garment_with_white_halo() -> Image.Image:
+    """The garment with the 1px white fringe the background model often leaves."""
+    image = Image.new("RGBA", SIZE, (0, 0, 0, 0))
+    halo = Image.new("RGBA", (202, 302), (255, 255, 255, 255))
+    halo.paste(Image.new("RGBA", (200, 300), (200, 30, 30, 255)), (1, 1))
+    image.paste(halo, (99, 149))
     return image
 
 
@@ -70,8 +103,9 @@ class TestSaveCutout:
 
         with Image.open(service.storage_path / path) as saved:
             assert saved.mode == "RGBA"
-            # 200x300 garment plus 2% of the long side (6px) on every edge
-            assert saved.size == (212, 312)
+            # 200x300 garment plus 2% of the long side (6px) on every edge. The clean-up's
+            # 1px edge erosion trims one pixel off each side, hence 210x310, not 212x312.
+            assert saved.size == (210, 310)
             assert saved.getpixel((0, 0))[3] == 0
             assert saved.getpixel((106, 156))[3] == 255
 
@@ -107,6 +141,59 @@ class TestSaveCutout:
         halo = Image.new("RGBA", SIZE, (255, 255, 255, 5))
         with pytest.raises(ValueError, match="No garment"):
             ImageService().save_cutout(halo, "x/halo.jpg")
+
+    def test_a_stray_blob_far_from_the_garment_is_removed(self):
+        service = ImageService()
+        path = service.save_cutout(_garment_with_stray_blob(), _photo_path(service))
+
+        with Image.open(service.storage_path / path) as saved:
+            # The blob is outside the garment, so the saved PNG is just the garment.
+            assert saved.size == (210, 310)
+
+    def test_two_similar_blobs_are_both_kept(self):
+        service = ImageService()
+        path = service.save_cutout(_pair_of_shoes(), _photo_path(service))
+
+        with Image.open(service.storage_path / path) as saved:
+            alpha = saved.getchannel("A")
+            assert alpha.getpixel((44, 64)) == 255  # the left shoe
+            assert alpha.getpixel((144, 64)) == 255  # the right shoe
+
+    def test_small_holes_are_filled_but_large_ones_are_not(self):
+        service = ImageService()
+        path = service.save_cutout(_garment_with_holes(), _photo_path(service))
+
+        with Image.open(service.storage_path / path) as saved:
+            alpha = saved.getchannel("A")
+            assert alpha.getpixel((108, 158)) == 255  # the pin-hole is filled
+            assert alpha.getpixel((156, 86)) == 0  # the large hole stays open
+
+    def test_a_one_pixel_white_halo_is_removed(self):
+        service = ImageService()
+        path = service.save_cutout(_garment_with_white_halo(), _photo_path(service))
+
+        with Image.open(service.storage_path / path) as saved:
+            # The halo is gone: the saved PNG is exactly the garment (with the halo it
+            # would be 214x314, the halo's edge, not the garment's).
+            assert saved.size == (212, 312)
+            rgba = saved.convert("RGBA")
+            background = Image.new("RGBA", rgba.size, (0, 0, 0, 255))
+            composited = Image.alpha_composite(background, rgba)
+            alpha = np.asarray(rgba.getchannel("A"))
+            edge = (alpha > 0) & (alpha < 255)
+            assert edge.any()  # the cut edge is soft, not hard
+            # Composited on black, the soft edge must not be brighter than the garment colour.
+            for channel, garment in zip(composited.split(), (200, 30, 30), strict=False):
+                assert (np.asarray(channel)[edge] <= garment).all()
+
+    def test_missing_scipy_skips_the_clean_up(self):
+        service = ImageService()
+        with patch.dict("sys.modules", {"scipy": None}):
+            path = service.save_cutout(_garment_on_transparent(), _photo_path(service))
+
+        with Image.open(service.storage_path / path) as saved:
+            assert saved.size == (212, 312)
+            assert saved.getpixel((106, 156))[3] == 255
 
 
 class TestCutoutLifecycle:
