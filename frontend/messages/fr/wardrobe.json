@@ -180,6 +180,7 @@
       "washed": "Article marqué comme lavé"
     },
     "brand": "Marque",
+    "labelPhotoHint": "Ajoutez un gros plan de l'étiquette comme photo supplémentaire pour que l'IA puisse lire la marque et la taille.",
     "name": "Nom",
     "notes": "Notes",
     "placeholders": {
@@ -206,6 +207,8 @@
       "pattern": "Motif",
       "season": "Saison",
       "secondaryColor": "Couleur secondaire",
+      "size": "Taille",
+      "sizePlaceholder": "p. ex. M, 42, W32 L30",
       "style": "Style",
       "tertiaryColor": "Couleur tertiaire",
       "title": "Tags IA"
@@ -245,6 +248,7 @@
       "needsWashing": "À laver",
       "never": "Jamais",
       "primaryImage": "Principal",
+      "sizeBadge": "Taille {size}",
       "timeline": "{count, plural, one {Chronologie (# événement)} other {Chronologie (# événements)}}",
       "today": "Aujourd'hui",
       "totalWears": "Total des portés",
