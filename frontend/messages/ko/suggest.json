@@ -73,6 +73,7 @@
       "alt": "코디 플랫레이 이미지",
       "download": "다운로드",
       "downloadFailed": "이미지를 저장하지 못했습니다",
+      "includeItems": "이미지에 표시할 아이템",
       "loadFailed": "이미지를 불러오지 못했습니다",
       "portrait": "세로 4:5",
       "preparing": "아이템을 오려내는 중…",
