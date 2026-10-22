@@ -14,8 +14,9 @@ def _load_zone(name: str | None) -> ZoneInfo | None:
     try:
         return ZoneInfo(name)
     except (ZoneInfoNotFoundError, ValueError, OSError):
-        # OSError: a name such as "America" is a folder in the zone database, and some
-        # tzdata layouts raise IsADirectoryError for it rather than ZoneInfoNotFoundError.
+        # OSError (which includes IsADirectoryError): a name such as "America" is a folder in
+        # the zone database, and some tzdata layouts raise IsADirectoryError for it rather than
+        # ZoneInfoNotFoundError.
         return None
 
 
