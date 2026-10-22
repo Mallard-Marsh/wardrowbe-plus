@@ -31,6 +31,9 @@ router = APIRouter(prefix="/outfits", tags=["Outfits"])
 
 # The photo only has to show what is worn, so it is shrunk before it goes to the AI.
 PHOTO_MAX_PX = 1600
+# Each worn garment is cut out of the photo for the matching call, with some room round its box.
+CROP_PADDING = 0.05
+CROP_MAX_PX = 640
 
 
 class PhotoBox(BaseModel):
@@ -161,6 +164,27 @@ async def match_outfit_from_photo(
     )
 
 
+def _crop_garments(photo_path: Path, detected: list[DetectedGarment]) -> list[bytes]:
+    """A JPEG close-up of each detected garment, cut from the photo with a little room round it."""
+    crops = []
+    with Image.open(photo_path) as photo:
+        width, height = photo.size
+        for g in detected:
+            pad_x, pad_y = g.width * CROP_PADDING, g.height * CROP_PADDING
+            box = (
+                max(int((g.left - pad_x) * width), 0),
+                max(int((g.top - pad_y) * height), 0),
+                min(int((g.left + g.width + pad_x) * width) + 1, width),
+                min(int((g.top + g.height + pad_y) * height) + 1, height),
+            )
+            crop = photo.crop(box)
+            crop.thumbnail((CROP_MAX_PX, CROP_MAX_PX), Image.Resampling.LANCZOS)
+            out = BytesIO()
+            crop.convert("RGB").save(out, format="JPEG", quality=85)
+            crops.append(out.getvalue())
+    return crops
+
+
 async def _match(
     ai, photo_path: Path, detected: list[DetectedGarment], groups: list[GarmentCandidates]
 ):
@@ -186,9 +210,9 @@ async def _match(
     if not shown:
         return nothing
     try:
+        crops = await asyncio.to_thread(_crop_garments, photo_path, detected)
         reply = await ai.match_outfit_photo(
-            photo_path,
-            [(i + 1, g.type, g.colors) for i, g in enumerate(detected)],
+            [(i + 1, g.type, g.colors, crops[i]) for i, g in enumerate(detected)],
             shown,
         )
     except Exception as e:

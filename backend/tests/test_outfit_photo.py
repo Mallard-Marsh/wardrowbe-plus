@@ -281,8 +281,11 @@ class TestFromPhotoEndpoint:
             await _post(client, auth_headers)
 
         ai.match_outfit_photo.assert_awaited_once()
-        _, garments, candidates = ai.match_outfit_photo.await_args.args
-        assert garments == [(1, "shirt", ["blue"])]
+        garments, candidates = ai.match_outfit_photo.await_args.args
+        assert [(n, t, c) for n, t, c, _ in garments] == [(1, "shirt", ["blue"])]
+        with Image.open(BytesIO(garments[0][3])) as crop:
+            # the shirt box is 50% x 30% of a 300x500 photo, plus 5% room each side
+            assert 150 <= crop.width <= 180 and 150 <= crop.height <= 175
         assert [(n, g) for n, g, _ in candidates] == [(1, 1)]
         assert candidates[0][2].exists()
 

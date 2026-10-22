@@ -1,6 +1,6 @@
 OUTPUT ONLY JSON. NO TEXT. NO EXPLANATIONS.
 
-The first image is a photo of a person wearing an outfit. After it come catalogue photos of clothes the person owns, each introduced by a line "Candidate N (garment G)". For each garment G worn in the photo (they are listed below), decide whether it is the SAME physical item as one of its candidates: same type, colour, pattern, material, cut and details such as buttons, pockets, logos and stitching. Similar is not enough: if no candidate is clearly the same item, answer null.
+You are shown garments from a photo of a person wearing an outfit. Each garment is introduced by a line "Garment G: type, colours" and a close-up photo of it. After each one come catalogue photos of clothes the person owns that might be the same item, each introduced by a line "Candidate N (garment G)". For each garment, decide whether it is the SAME physical item as one of ITS candidates: same type, colour, pattern, material, cut and details such as buttons, pockets, logos and stitching. Similar is not enough: if no candidate is clearly the same item, answer null.
 
 Return a JSON object like this:
 {"matches": [{"garment": 1, "candidate": 3, "confidence": 0.8}, {"garment": 2, "candidate": null, "confidence": 0.0}]}
