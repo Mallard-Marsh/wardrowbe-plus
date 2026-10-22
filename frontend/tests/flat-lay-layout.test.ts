@@ -74,6 +74,30 @@ describe('layoutFlatLay', () => {
     expect(at('belt').y).toBeLessThan(at('shoes').y)
   })
 
+  it('lays shirt, jeans and trainers in columns on a square, not a thin row', () => {
+    const outfit = [entry('shirt', 'shirt', 1), entry('jeans', 'jeans', 0.8), entry('shoes', 'sneakers', 1.5)]
+    const placed = layoutFlatLay(outfit, 'square')
+    const at = (id: string) => placed.find((p) => p.id === id)!
+
+    // shirt above jeans, trainers beside them: the block is taller than it is wide
+    expect(at('shirt').y).toBeLessThan(at('jeans').y)
+    expect(at('shoes').x).toBeGreaterThan(at('jeans').x + at('jeans').width)
+    const top = Math.min(...placed.map((p) => p.y))
+    const bottom = Math.max(...placed.map((p) => p.labelY))
+    const left = Math.min(...placed.map((p) => p.x))
+    const right = Math.max(...placed.map((p) => p.x + p.width))
+    expect(bottom - top).toBeGreaterThan(right - left)
+  })
+
+  it('still uses a row when it allows clearly bigger garments', () => {
+    // a long dress with sandals: columns would force the dress much smaller than a row does
+    const placed = layoutFlatLay([entry('dress', 'dress', 0.5), entry('sandals', 'sandals', 1.6)], 'square')
+    const centre = (p: FlatLayPlacement) => p.y + p.height / 2
+
+    expect(centre(placed[0])).toBeCloseTo(centre(placed[1]), 5)
+    expect(placed.find((p) => p.id === 'dress')!.height).toBeGreaterThan(700)
+  })
+
   it('draws the jeans 3.5x longer than the sneakers when both have the same aspect', () => {
     const placed = layoutFlatLay([entry('jeans', 'jeans', 1), entry('kicks', 'sneakers', 1)], 'square')
     const at = (id: string) => placed.find((p) => p.id === id)!
