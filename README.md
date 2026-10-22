@@ -280,6 +280,7 @@ Upgrading from a release before sign-in identities (the `user_identities` table)
 | `AI_API_KEY` | AI API key (if required) | Depends |
 | `AI_IMAGE_MAX_SIZE` | Long edge in pixels of the photo the vision model sees, 256 to 2048 (default: `512`). Raise it, e.g. to `1024`, so fine patterns and small colours are not missed | No |
 | `AI_IMAGE_QUALITY` | JPEG quality of that photo, 1 to 100 (default: `85`) | No |
+| `AI_MATCH_MODEL` | Vision model used to match a garment in a photo of you to your wardrobe ("Log from photo"). A stronger model than the tagging one is much more reliable here, e.g. `gpt-4o`. Unset: `AI_VISION_MODEL` is used | No |
 | `APP_URL` | Public app URL used in notification and invite links (default: `http://localhost:3000`) | No |
 | `LOG_LEVEL` | Log level for the API and workers (default: INFO) | No |
 

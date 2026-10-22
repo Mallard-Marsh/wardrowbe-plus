@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from app.config import Settings
 from app.services.ai_service import (
     DESCRIPTION_LANGUAGES,
+    AIEndpointConfig,
     AIResponseTruncatedError,
     AIService,
     ClothingTags,
@@ -1115,3 +1116,47 @@ class TestNewPatternAndMaterialValues:
 
         for hint in ("pinstripe", "herringbone", "houndstooth", "gingham", "tweed", "corduroy"):
             assert hint in TAGGING_PROMPT
+
+
+class TestMatchModel:
+    """Matching a worn garment to wardrobe photos can use its own, stronger vision model."""
+
+    @staticmethod
+    def _endpoint(match_model=None) -> AIEndpointConfig:
+        return AIEndpointConfig(
+            url="http://x", vision_model="small", text_model="text", match_model=match_model
+        )
+
+    def test_matching_uses_the_match_model_when_set(self):
+        endpoint = self._endpoint("big")
+        assert AIService._model_for(endpoint, True, True) == "big"
+
+    def test_matching_falls_back_to_the_vision_model(self):
+        endpoint = self._endpoint()
+        assert AIService._model_for(endpoint, True, True) == "small"
+
+    def test_other_calls_keep_their_own_models(self):
+        endpoint = self._endpoint("big")
+        assert AIService._model_for(endpoint, True, False) == "small"
+        assert AIService._model_for(endpoint, False, False) == "text"
+
+    def test_only_the_default_endpoint_gets_the_setting(self):
+        service = AIService(
+            endpoints=[{"url": "http://mine", "vision_model": "mine", "name": "mine"}]
+        )
+        service.settings = SimpleNamespace(ai_match_model="big")
+        mine, _default = service._endpoints
+        assert mine.match_model is None
+        assert AIService._model_for(mine, True, True) == "mine"
+
+    def test_a_blank_setting_is_unset(self):
+        assert Settings(ai_match_model="  ").ai_match_model is None
+        assert Settings(ai_match_model="gpt-4o").ai_match_model == "gpt-4o"
+        assert Settings().ai_match_model is None
+
+    def test_the_default_endpoint_is_built_with_the_setting(self, monkeypatch):
+        monkeypatch.setattr(
+            "app.services.ai_service.get_settings", lambda: Settings(ai_match_model="gpt-4o")
+        )
+        service = AIService()
+        assert service._endpoints[-1].match_model == "gpt-4o"
