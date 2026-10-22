@@ -179,4 +179,34 @@ describe('FlatLayView', () => {
     expect(await screen.findByText('loadFailed')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'download' })).toBeDisabled()
   })
+
+  it('leaves an item out of the picture when it is unticked, and never lets the last one go', async () => {
+    vi.mocked(api.get).mockResolvedValue({ items: [item('a'), item('b')] })
+
+    render(<FlatLayView outfitId="o1" items={[item('a'), item('b')]} isOwner />, { wrapper })
+    await waitFor(() => expect(renderLib.drawFlatLay).toHaveBeenCalled())
+    expect(vi.mocked(renderLib.drawFlatLay).mock.calls.at(-1)![1].map((p) => p.id)).toEqual(['a', 'b'])
+
+    const boxes = screen.getAllByRole('checkbox')
+    fireEvent.click(boxes[1])
+
+    await waitFor(() =>
+      expect(vi.mocked(renderLib.drawFlatLay).mock.calls.at(-1)![1].map((p) => p.id)).toEqual(['a']),
+    )
+    expect(boxes[0]).toBeDisabled()
+
+    fireEvent.click(boxes[1])
+    await waitFor(() =>
+      expect(vi.mocked(renderLib.drawFlatLay).mock.calls.at(-1)![1].map((p) => p.id)).toEqual(['a', 'b']),
+    )
+  })
+
+  it('shows no tick-boxes for a single item', async () => {
+    vi.mocked(api.get).mockResolvedValue({ items: [item('a')] })
+
+    render(<FlatLayView outfitId="o1" items={[item('a')]} isOwner />, { wrapper })
+    await waitFor(() => expect(renderLib.drawFlatLay).toHaveBeenCalled())
+
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+  })
 })

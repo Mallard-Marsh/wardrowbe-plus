@@ -36,8 +36,12 @@ const GAP = 0.03;
 const LABEL_HEIGHT = 0.05;
 // A lone small item must not be blown up: the scale is capped so a 100 cm garment fills at most
 // 85% of the canvas height.
-const UPGRADE_CAP = 0.85;
+const UPSCALE_CAP = 0.85;
 const CAP_REFERENCE_CM = 100;
+// In a row each name sits under a narrow garment (a tie, a belt standing up), so its width is allowed
+// to grow to this share of the canvas, as far as the neighbouring names leave room.
+const ROW_LABEL_MIN = 0.16;
+const LABEL_GAP = 0.01;
 // An earlier (preferred) arrangement is used unless a later one allows a scale more than this much
 // bigger, i.e. it keeps at least 90% of the best scale.
 const PREFERENCE_TOLERANCE = 0.9;
@@ -158,7 +162,14 @@ function twoColumnCandidate(
 }
 
 /** All items in one row, each centred in the row, like a photographed flat lay. */
-function rowCandidate(items: Sized[], inner: Box, gap: number, labelHeight: number, cap: number): Candidate {
+function rowCandidate(
+  items: Sized[],
+  inner: Box,
+  gap: number,
+  labelHeight: number,
+  cap: number,
+  canvasWidth: number,
+): Candidate {
   const totalWidth = sumCm(items, (s) => s.wCm);
   const tallest = maxCm(items, (s) => s.hCm);
   const scale = Math.min(
@@ -177,7 +188,7 @@ function rowCandidate(items: Sized[], inner: Box, gap: number, labelHeight: numb
       let x = inner.x + (inner.width - blockWidth) / 2;
       const y0 = inner.y + (inner.height - blockHeight) / 2;
 
-      return items.map((it, i) => {
+      const placements = items.map((it, i) => {
         const width = widths[i];
         const height = it.hCm * s;
         const y = y0 + (imageHeight - height) / 2;
@@ -194,8 +205,23 @@ function rowCandidate(items: Sized[], inner: Box, gap: number, labelHeight: numb
         x += width + gap;
         return placement;
       });
+      return widenRowLabels(placements, canvasWidth);
     },
   };
+}
+
+/** Gives each name in a row more room than its garment is wide, without running into the names
+ *  beside it: each name may take up to half the distance to its neighbours' centres. */
+function widenRowLabels(placements: FlatLayPlacement[], canvasWidth: number): FlatLayPlacement[] {
+  const wanted = canvasWidth * ROW_LABEL_MIN;
+  const labelGap = canvasWidth * LABEL_GAP;
+  return placements.map((p, i) => {
+    const distances = [placements[i - 1], placements[i + 1]]
+      .filter((n): n is FlatLayPlacement => n !== undefined)
+      .map((n) => Math.abs(n.labelX - p.labelX));
+    const room = distances.length > 0 ? Math.min(...distances) - labelGap : wanted;
+    return { ...p, labelWidth: Math.max(p.width, Math.min(wanted, room)) };
+  });
 }
 
 /** One column of items, centred on the canvas. */
@@ -257,7 +283,7 @@ export function layoutFlatLay(entries: FlatLayEntry[], format: FlatLayFormat): F
     width: width - margin * 2,
     height: height - margin * 2,
   };
-  const cap = (UPGRADE_CAP * height) / CAP_REFERENCE_CM;
+  const cap = (UPSCALE_CAP * height) / CAP_REFERENCE_CM;
 
   const sized = entries.map(sizeInCm);
   const main = sized.filter((s) => MAIN_ROLES.includes(roleOf(s.entry.type))).sort(byRole(MAIN_ROLES));
@@ -266,12 +292,12 @@ export function layoutFlatLay(entries: FlatLayEntry[], format: FlatLayFormat): F
   const candidates: Candidate[] = [];
   if (main.length > 0 && side.length > 0) {
     candidates.push(twoColumnCandidate(main, side, inner, gap, labelHeight, cap));
-    candidates.push(rowCandidate([...main, ...side], inner, gap, labelHeight, cap));
+    candidates.push(rowCandidate([...main, ...side], inner, gap, labelHeight, cap, width));
   } else {
     const all = main.length > 0 ? main : side;
     if (all.length <= 3) {
       candidates.push(singleColumnCandidate(all, inner, gap, labelHeight, cap));
-      candidates.push(rowCandidate(all, inner, gap, labelHeight, cap));
+      candidates.push(rowCandidate(all, inner, gap, labelHeight, cap, width));
     } else {
       const [left, right] = splitBalanced(all);
       candidates.push(twoColumnCandidate(left, right, inner, gap, labelHeight, cap));

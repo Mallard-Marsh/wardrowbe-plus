@@ -73,6 +73,7 @@
       "alt": "Immagine flat lay del completo",
       "download": "Scarica",
       "downloadFailed": "Impossibile salvare l'immagine",
+      "includeItems": "Mostra nell'immagine",
       "loadFailed": "Impossibile caricare le immagini",
       "portrait": "Verticale 4:5",
       "preparing": "Ritaglio dei capi in corso…",

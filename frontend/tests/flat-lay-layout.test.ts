@@ -192,4 +192,25 @@ describe('layoutFlatLay', () => {
   it('returns nothing for an empty outfit', () => {
     expect(layoutFlatLay([], 'square')).toEqual([])
   })
+
+  it('gives the name under a narrow garment in a row room to read, without running into its neighbours', () => {
+    // a standing tie between a shirt and trousers: the tie is far narrower than its name
+    const outfit = [entry('shirt', 'shirt', 1), entry('tie', 'tie', 0.15), entry('pants', 'pants', 0.5)]
+    const placed = layoutFlatLay(outfit, 'square')
+    const tie = placed.find((p) => p.id === 'tie')!
+    const width = FLAT_LAY_SIZES.square.width
+
+    expect(tie.labelWidth).toBeGreaterThan(tie.width)
+    for (const a of placed) {
+      for (const b of placed) {
+        if (a.id >= b.id) continue
+        const overlap =
+          a.labelX - a.labelWidth / 2 < b.labelX + b.labelWidth / 2 &&
+          b.labelX - b.labelWidth / 2 < a.labelX + a.labelWidth / 2
+        const sameLine = Math.abs(a.labelY - b.labelY) < width * 0.05
+        // names on the same line never overlap; names far apart vertically may share a column
+        expect(overlap && sameLine).toBe(false)
+      }
+    }
+  })
 })
