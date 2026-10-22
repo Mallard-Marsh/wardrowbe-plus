@@ -7,7 +7,7 @@ from io import BytesIO
 from pathlib import Path
 
 import imagehash
-from PIL import Image, ImageOps
+from PIL import Image, ImageFilter, ImageOps
 from pillow_heif import register_heif_opener
 
 from app.config import get_settings
@@ -44,6 +44,10 @@ CUTOUT_MAX_PX = 1000
 CUTOUT_ALPHA_THRESHOLD = 16
 CUTOUT_MIN_AREA = 0.02
 CUTOUT_PADDING = 0.02
+# Clean-up: a connected region smaller than this share of the largest is a speck or a
+# neighbouring garment's edge; a hole smaller than this share of the garment is a pin-hole.
+CUTOUT_KEEP_REGION_SHARE = 0.15
+CUTOUT_FILL_HOLE_SHARE = 0.01
 
 IMAGE_MIME_TYPES = {
     ".jpg": "image/jpeg",
@@ -55,6 +59,63 @@ IMAGE_MIME_TYPES = {
 }
 ALLOWED_EXTENSIONS = frozenset(IMAGE_MIME_TYPES)
 ALLOWED_MIME_TYPES = frozenset(IMAGE_MIME_TYPES.values())
+
+
+def _clean_cutout_alpha(rgba: Image.Image) -> Image.Image:
+    """Tidy the background model's alpha channel before the cut-out is trimmed.
+
+    Keeps the garment plus anything of comparable size (a pair of shoes is two similar
+    blobs, a sleeve can split from its body) and drops the rest (specks, a neighbouring
+    garment's edge). Fills pin-holes but not real gaps, and softens the cut edge so there
+    is no halo on white. Junk that touches the garment survives: only a per-garment crop
+    fixes that. Never raises: on any failure the unclean image is returned unchanged.
+    """
+    try:
+        import numpy as np
+        from scipy import ndimage
+    except ImportError:
+        return rgba
+
+    try:
+        mask = np.asarray(rgba.getchannel("A")) > CUTOUT_ALPHA_THRESHOLD
+
+        labelled, count = ndimage.label(mask, structure=np.ones((3, 3), dtype=np.uint8))
+        if count > 1:
+            sizes = ndimage.sum(mask, labelled, range(1, count + 1))
+            keep = [
+                i
+                for i, size in enumerate(sizes, start=1)
+                if size >= CUTOUT_KEEP_REGION_SHARE * sizes.max()
+            ]
+            mask = np.isin(labelled, keep)
+
+        filled = ndimage.binary_fill_holes(mask)
+        if filled.sum() > mask.sum():
+            holes = filled & ~mask
+            hole_labels, hole_count = ndimage.label(holes)
+            if hole_count:
+                hole_sizes = ndimage.sum(holes, hole_labels, range(1, hole_count + 1))
+                garment_area = filled.sum()
+                for label_id, size in enumerate(hole_sizes, start=1):
+                    if size < CUTOUT_FILL_HOLE_SHARE * garment_area:
+                        mask |= hole_labels == label_id
+
+        mask_image = Image.fromarray(np.where(mask, 255, 0).astype(np.uint8), mode="L")
+        # Erode one pixel, then blur, so the cut edge is soft. The blurred alpha is kept
+        # inside the eroded support: left free, the blur would spread one pixel back out
+        # and re-add exactly the halo the erosion removed.
+        eroded = mask_image.filter(ImageFilter.MinFilter(3))
+        blurred = eroded.filter(ImageFilter.GaussianBlur(radius=1))
+        mask_image = Image.fromarray(
+            np.where(np.asarray(eroded) > 0, np.asarray(blurred), 0).astype(np.uint8), mode="L"
+        )
+
+        cleaned = rgba.copy()
+        cleaned.putalpha(mask_image)
+        return cleaned
+    except Exception as e:
+        logger.warning(f"Cut-out clean-up failed, keeping the unclean mask: {e}")
+        return rgba
 
 
 def _flatten_to_rgb(image: Image.Image) -> Image.Image:
@@ -203,9 +264,11 @@ class ImageService:
     def save_cutout(self, cutout: Image.Image, image_path: str) -> str:
         """Trim a background-removed RGBA photo to the garment and store it as a PNG.
 
-        Raises ValueError when no garment was found (everything transparent, or only a speck).
+        The alpha channel is cleaned up first (stray blobs and specks removed, pin-holes
+        filled, edge softened); see _clean_cutout_alpha. Raises ValueError when no garment
+        was found (everything transparent, or only a speck).
         """
-        rgba = cutout.convert("RGBA")
+        rgba = _clean_cutout_alpha(cutout.convert("RGBA"))
         alpha = rgba.getchannel("A")
         box = alpha.point(lambda a: 255 if a > CUTOUT_ALPHA_THRESHOLD else 0).getbbox()
         if box is None:
