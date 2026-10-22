@@ -104,6 +104,15 @@ class Settings(BaseSettings):
     ai_image_max_size: int = Field(default=512, ge=256, le=2048)
     ai_image_quality: int = Field(default=85, ge=1, le=100)
     ai_reasoning_effort: str | None = Field(default="none")
+    # A stronger vision model for matching a worn garment to wardrobe photos ("log an outfit from a
+    # photo"), where a small model confidently picks the wrong item. Unset: the vision model is used.
+    # Only the endpoint built from these settings uses it; a person's own endpoints keep their models.
+    ai_match_model: str | None = Field(default=None)
+
+    @field_validator("ai_match_model", mode="before")
+    @classmethod
+    def blank_match_model_is_unset(cls, v: str | None) -> str | None:
+        return (v.strip() or None) if isinstance(v, str) else v
 
     @field_validator("ai_reasoning_effort", mode="before")
     @classmethod
