@@ -180,6 +180,7 @@
       "washed": "세탁 완료로 표시되었어요"
     },
     "brand": "브랜드",
+    "labelPhotoHint": "라벨을 가까이서 찍은 사진을 추가 사진으로 올리면 AI가 브랜드와 사이즈를 읽을 수 있습니다.",
     "name": "이름",
     "notes": "메모",
     "placeholders": {
@@ -206,6 +207,8 @@
       "pattern": "패턴",
       "season": "계절",
       "secondaryColor": "보조 색상",
+      "size": "사이즈",
+      "sizePlaceholder": "예: M, 42, W32 L30",
       "style": "스타일",
       "tertiaryColor": "세 번째 색상",
       "title": "AI 태그"
@@ -245,6 +248,7 @@
       "needsWashing": "세탁 필요",
       "never": "없음",
       "primaryImage": "대표",
+      "sizeBadge": "사이즈 {size}",
       "timeline": "{count, plural, other {타임라인 (#건)}}",
       "today": "오늘",
       "totalWears": "총 착용 횟수",

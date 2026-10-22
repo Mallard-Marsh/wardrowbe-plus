@@ -9,10 +9,23 @@ from arq import Retry
 from sqlalchemy import select, update
 
 from app.config import get_settings
-from app.models.item import TAG_COLUMNS, ClothingItem, ItemStatus, TaggedBy, TaggingStatus
+from app.models.item import (
+    TAG_COLUMNS,
+    ClothingItem,
+    ItemImage,
+    ItemStatus,
+    TaggedBy,
+    TaggingStatus,
+)
 from app.models.preference import UserPreference
 from app.models.user import User
-from app.services.ai_service import AIService, ClothingTags, repeats_identically
+from app.services.ai_service import (
+    MAX_EXTRA_IMAGES,
+    AIService,
+    ClothingTags,
+    repeats_identically,
+)
+from app.services.image_service import ImageService
 from app.utils.locale import DEFAULT_LOCALE
 from app.workers.db import get_db_session
 
@@ -106,6 +119,10 @@ def tags_to_item_fields(tags: ClothingTags, raw_response: str | None = None) -> 
         "formality": tags.formality,
         "fit": tags.fit,
     }
+    # Both only ever come from a legible label. The size lives in the tags (a user-owned key),
+    # the brand in its own column; tag_item_image fills each only when it is still empty.
+    if tags.size:
+        tags_jsonb["size"] = tags.size
     if tags.logprobs_confidence is not None:
         tags_jsonb["logprobs_confidence"] = tags.logprobs_confidence
 
@@ -128,6 +145,8 @@ def tags_to_item_fields(tags: ClothingTags, raw_response: str | None = None) -> 
         "tagged_by": TaggedBy.auto,
         "tagged_at": datetime.now(UTC),
     }
+    if tags.brand:
+        fields["brand"] = tags.brand
     if raw_response:
         fields["ai_raw_response"] = {"raw_text": raw_response}
     if tags.unrecognized_type:
@@ -227,6 +246,7 @@ async def tag_item_image(
         # Get user's AI endpoints from preferences, and mark this attempt as started
         ai_endpoints = None
         locale = DEFAULT_LOCALE
+        extra_images: list[Path] = []
         db = get_db_session(ctx)
         try:
             # Get the item to find user_id
@@ -237,6 +257,21 @@ async def tag_item_image(
 
             locale_result = await db.execute(select(User.locale).where(User.id == item.user_id))
             locale = locale_result.scalar_one_or_none() or DEFAULT_LOCALE
+
+            # The item's other photos (a close-up of its label) go to the AI with the main one,
+            # so a legible brand or size can be read. Missing files are simply left out.
+            extra_result = await db.execute(
+                select(ItemImage.image_path)
+                .where(ItemImage.item_id == item.id)
+                .order_by(ItemImage.position)
+                .limit(MAX_EXTRA_IMAGES)
+            )
+            image_service = ImageService()
+            extra_images = [
+                full
+                for full in (image_service.get_image_path(rel) for rel in extra_result.scalars())
+                if full.exists()
+            ]
 
             # Overwritten on every attempt (not set-once), so a retry's backoff wait
             # reads as "queued for retry," not "still analyzing."
@@ -262,8 +297,11 @@ async def tag_item_image(
 
         # Analyze with AI (uses custom endpoints if available)
         ai_service = AIService(endpoints=ai_endpoints)
+        # Only passed when there are some, so a plain item is analysed exactly as before.
+        extra_options = {"extra_images": extra_images} if extra_images else {}
         tags = await asyncio.wait_for(
-            ai_service.analyze_image(path, locale=locale), timeout=_tagging_call_budget(ai_service)
+            ai_service.analyze_image(path, locale=locale, **extra_options),
+            timeout=_tagging_call_budget(ai_service),
         )
 
         logger.info(
@@ -319,9 +357,16 @@ async def tag_item_image(
                     for key, val in (value or {}).items():
                         if val in _NOTHING:
                             continue
+                        # A size a person typed, or an earlier read of a label, is kept even
+                        # on "re-analyse and replace": only an empty size is ever filled.
+                        if key == "size" and merged.get("size"):
+                            continue
                         if _ai_may_set(key, merged.get(key), val, replace=replace, kept=kept):
                             merged[key] = val
                     item.tags = merged
+                elif field == "brand":
+                    if not item.brand and value:
+                        item.brand = value
                 elif field in ("tagging_status", "tagged_by", "tagged_at"):
                     if was_pending:
                         setattr(item, field, value)

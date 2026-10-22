@@ -255,7 +255,11 @@ async def test_tag_item_image_runs_ai_when_enabled(monkeypatch):
     # out to let the run reach the AI path at all.
     class _Result:
         def scalar_one_or_none(self):
-            return SimpleNamespace(user_id=uuid4(), ai_endpoints=None)
+            return SimpleNamespace(id=uuid4(), user_id=uuid4(), ai_endpoints=None)
+
+        def scalars(self):
+            # the item has no extra photos
+            return iter(())
 
     class _Session:
         async def execute(self, *args, **kwargs):

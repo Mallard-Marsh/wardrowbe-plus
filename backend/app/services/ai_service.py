@@ -5,6 +5,7 @@ import json
 import logging
 import math
 import re
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Literal
 
@@ -56,6 +57,9 @@ class ClothingTags(BaseModel):
     formality: str | None = None
     season: list[str] = []
     fit: str | None = None
+    # Read from a label when one is legible; never guessed. See clean_label_text.
+    brand: str | None = None
+    size: str | None = None
     confidence: float = 0.0
     logprobs_confidence: float | None = None
     description: str | None = None
@@ -129,6 +133,32 @@ def promote_type_subtype(item_type: str, subtype: object) -> tuple[str, object]:
     ):
         return key, None
     return item_type, subtype
+
+
+# What a model answers when a label is not legible, instead of the null it was asked for.
+_NO_LABEL_TEXT = frozenset(
+    {"unknown", "none", "null", "n/a", "na", "not visible", "not legible", "unreadable", "?", "-"}
+)
+BRAND_MAX_CHARS = 60
+SIZE_MAX_CHARS = 32
+# Extra photos of the item (a label close-up) sent with the main one.
+MAX_EXTRA_IMAGES = 2
+
+
+def clean_label_text(value: object, max_chars: int) -> str | None:
+    """A brand or size read off a label, or None when it is missing, junk or too long.
+
+    A long answer is a sentence rather than a label, so it is dropped, not cut short.
+    """
+    if not isinstance(value, str):
+        return None
+    # Line breaks and tabs become spaces; other control characters are dropped.
+    cleaned = " ".join(
+        "".join(c if c.isprintable() else " " if c.isspace() else "" for c in value).split()
+    )
+    if not cleaned or cleaned.lower() in _NO_LABEL_TEXT or len(cleaned) > max_chars:
+        return None
+    return cleaned
 
 
 def compute_tag_completeness(tags: "ClothingTags") -> float:
@@ -443,6 +473,8 @@ class AIService:
         tags.style = validate_list(data.get("style", []), VALID_STYLES)
         tags.season = validate_list(data.get("season", []), VALID_SEASONS)
         tags.fit = validate_value(data.get("fit"), VALID_FIT)
+        tags.brand = clean_label_text(data.get("brand"), BRAND_MAX_CHARS)
+        tags.size = clean_label_text(data.get("size"), SIZE_MAX_CHARS)
         tags.confidence = compute_tag_completeness(tags)
 
         logger.info(
@@ -590,22 +622,32 @@ class AIService:
             last_error.retryable = True
         return None, last_error, None
 
-    async def analyze_image(self, image_path: str | Path, *, locale: str) -> ClothingTags:
+    async def analyze_image(
+        self,
+        image_path: str | Path,
+        *,
+        locale: str,
+        extra_images: Sequence[str | Path] = (),
+    ) -> ClothingTags:
         # PIL preprocessing is CPU-bound and synchronous; run off the event loop so
         # concurrent tagging jobs don't stall each other's in-flight HTTP reads.
         image_base64 = await asyncio.to_thread(self._preprocess_image, image_path)
+        # Further views of the same garment (a label close-up) go after the main photo.
+        extra_base64 = [
+            await asyncio.to_thread(self._preprocess_image, extra)
+            for extra in list(extra_images)[:MAX_EXTRA_IMAGES]
+        ]
+        image_parts = [
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded}"}}
+            for encoded in [image_base64, *extra_base64]
+        ]
 
         # System/user separation for injection protection
         messages_tags = [
             {"role": "system", "content": TAGGING_PROMPT},
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"},
-                    },
-                ],
+                "content": image_parts,
             },
         ]
 
@@ -620,12 +662,7 @@ class AIService:
             },
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"},
-                    },
-                ],
+                "content": image_parts,
             },
         ]
 

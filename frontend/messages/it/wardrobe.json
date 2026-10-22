@@ -180,6 +180,7 @@
       "washed": "Capo segnato come lavato"
     },
     "brand": "Marca",
+    "labelPhotoHint": "Aggiungi un primo piano dell'etichetta come foto extra, così l'IA può leggere marca e taglia.",
     "name": "Nome",
     "notes": "Note",
     "placeholders": {
@@ -206,6 +207,8 @@
       "pattern": "Motivo",
       "season": "Stagione",
       "secondaryColor": "Colore secondario",
+      "size": "Taglia",
+      "sizePlaceholder": "es. M, 42, W32 L30",
       "style": "Stile",
       "tertiaryColor": "Colore terziario",
       "title": "Tag IA"
@@ -245,6 +248,7 @@
       "needsWashing": "Da lavare",
       "never": "Mai",
       "primaryImage": "Principale",
+      "sizeBadge": "Taglia {size}",
       "timeline": "{count, plural, one {Cronologia (# evento)} other {Cronologia (# eventi)}}",
       "today": "Oggi",
       "totalWears": "Totale utilizzi",

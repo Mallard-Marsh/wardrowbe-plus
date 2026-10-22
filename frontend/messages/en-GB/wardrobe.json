@@ -180,6 +180,7 @@
       "washed": "Item marked as washed"
     },
     "brand": "Brand",
+    "labelPhotoHint": "Add a close-up of the label as an extra photo so the AI can read the brand and size.",
     "name": "Name",
     "notes": "Notes",
     "placeholders": {
@@ -206,6 +207,8 @@
       "pattern": "Pattern",
       "season": "Season",
       "secondaryColor": "Secondary colour",
+      "size": "Size",
+      "sizePlaceholder": "e.g. M, 42, W32 L30",
       "style": "Style",
       "tertiaryColor": "Tertiary colour",
       "title": "AI tags"
@@ -245,6 +248,7 @@
       "needsWashing": "Needs washing",
       "never": "Never",
       "primaryImage": "Primary",
+      "sizeBadge": "Size {size}",
       "timeline": "{count, plural, one {Timeline (# event)} other {Timeline (# events)}}",
       "today": "Today",
       "totalWears": "Total wears",

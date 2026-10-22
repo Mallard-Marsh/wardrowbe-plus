@@ -180,6 +180,7 @@
       "washed": "Stück als gewaschen markiert"
     },
     "brand": "Marke",
+    "labelPhotoHint": "Füge ein Nahaufnahme-Foto des Etiketts als zusätzliches Foto hinzu, damit die KI Marke und Größe lesen kann.",
     "name": "Name",
     "notes": "Notizen",
     "placeholders": {
@@ -206,6 +207,8 @@
       "pattern": "Muster",
       "season": "Saison",
       "secondaryColor": "Zweitfarbe",
+      "size": "Größe",
+      "sizePlaceholder": "z. B. M, 42, W32 L30",
       "style": "Stil",
       "tertiaryColor": "Drittfarbe",
       "title": "KI-Tags"
@@ -245,6 +248,7 @@
       "needsWashing": "Muss gewaschen werden",
       "never": "Nie",
       "primaryImage": "Primär",
+      "sizeBadge": "Größe {size}",
       "timeline": "{count, plural, one {Verlauf (# Ereignis)} other {Verlauf (# Ereignisse)}}",
       "today": "Heute",
       "totalWears": "Insgesamt getragen",

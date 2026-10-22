@@ -180,6 +180,7 @@
       "washed": "洗濯済みにしました"
     },
     "brand": "ブランド",
+    "labelPhotoHint": "タグのアップ写真を追加すると、AIがブランドとサイズを読み取れます。",
     "name": "名前",
     "notes": "メモ",
     "placeholders": {
@@ -206,6 +207,8 @@
       "pattern": "柄",
       "season": "季節",
       "secondaryColor": "サブカラー",
+      "size": "サイズ",
+      "sizePlaceholder": "例: M、42、W32 L30",
       "style": "スタイル",
       "tertiaryColor": "3番目の色",
       "title": "AIタグ"
@@ -245,6 +248,7 @@
       "needsWashing": "洗濯が必要",
       "never": "なし",
       "primaryImage": "メイン",
+      "sizeBadge": "サイズ {size}",
       "timeline": "{count, plural, one {タイムライン（# 件）} other {タイムライン（# 件）}}",
       "today": "今日",
       "totalWears": "総着用回数",

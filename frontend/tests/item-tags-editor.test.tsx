@@ -79,6 +79,17 @@ describe('ItemTagsEditor', () => {
     expect(screen.getByLabelText('Secondary color')).toHaveTextContent('White')
   })
 
+  it('edits the size as free text', () => {
+    const { last } = renderEditor({ ...tags, size: 'M' })
+    const field = screen.getByLabelText('Size')
+    expect(field).toHaveValue('M')
+
+    fireEvent.change(field, { target: { value: 'W32 L30' } })
+
+    expect(last().size).toBe('W32 L30')
+    expect(field).toHaveAttribute('maxlength', '32')
+  })
+
   it('changes a single-value tag', () => {
     const { last } = renderEditor()
     pick('Pattern', 'Plaid')
