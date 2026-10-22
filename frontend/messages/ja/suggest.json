@@ -73,6 +73,7 @@
       "alt": "コーディネートのフラットレイ画像",
       "download": "ダウンロード",
       "downloadFailed": "画像を保存できませんでした",
+      "includeItems": "画像に表示するアイテム",
       "loadFailed": "画像を読み込めませんでした",
       "portrait": "縦長 4:5",
       "preparing": "アイテムを切り抜いています…",
