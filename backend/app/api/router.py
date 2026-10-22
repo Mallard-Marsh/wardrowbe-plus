@@ -11,6 +11,7 @@ from app.api.images import router as images_router
 from app.api.items import router as items_router
 from app.api.learning import router as learning_router
 from app.api.notifications import router as notifications_router
+from app.api.outfit_photo import router as outfit_photo_router
 from app.api.outfits import router as outfits_router
 from app.api.pairings import router as pairings_router
 from app.api.preferences import router as preferences_router
@@ -31,6 +32,7 @@ api_router.include_router(preferences_router)
 api_router.include_router(families_router)
 api_router.include_router(weather_router)
 api_router.include_router(outfits_router)
+api_router.include_router(outfit_photo_router)
 api_router.include_router(flat_lay_router)
 api_router.include_router(pairings_router)
 api_router.include_router(notifications_router, prefix="/notifications", tags=["notifications"])
