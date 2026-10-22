@@ -302,10 +302,13 @@ class AIEndpointConfig:
         text_model: str = "phi3:mini",
         name: str = "default",
         enabled: bool = True,
+        match_model: str | None = None,
     ):
         self.url = url
         self.vision_model = vision_model
         self.text_model = text_model
+        # Used instead of vision_model for matching garments to wardrobe photos, when set.
+        self.match_model = match_model
         self.name = name
         self.enabled = enabled
 
@@ -355,6 +358,7 @@ class AIService:
                 vision_model=self.settings.ai_vision_model,
                 text_model=self.settings.ai_text_model,
                 name="default",
+                match_model=self.settings.ai_match_model,
             )
         )
 
@@ -485,19 +489,28 @@ class AIService:
         )
         return tags
 
+    @staticmethod
+    def _model_for(
+        endpoint: AIEndpointConfig, use_vision_model: bool, use_match_model: bool
+    ) -> str:
+        if use_match_model and endpoint.match_model:
+            return endpoint.match_model
+        return endpoint.vision_model if use_vision_model else endpoint.text_model
+
     async def _call_with_fallback(
         self,
         messages: list,
         task_name: str,
         use_vision_model: bool = True,
         request_logprobs: bool = False,
+        use_match_model: bool = False,
     ) -> tuple[str | None, Exception | None, list | None]:
         last_error = None
         every_endpoint_repeats = True
 
         for endpoint in self._endpoints:
             logger.info(f"Trying AI endpoint for {task_name}: {endpoint.name}")
-            model = endpoint.vision_model if use_vision_model else endpoint.text_model
+            model = self._model_for(endpoint, use_vision_model, use_match_model)
             use_logprobs = request_logprobs
             use_reasoning_effort = bool(self.settings.ai_reasoning_effort)
             current_reasoning_effort = self.settings.ai_reasoning_effort
@@ -777,7 +790,9 @@ class AIService:
             {"role": "system", "content": OUTFIT_MATCH_PROMPT},
             {"role": "user", "content": content},
         ]
-        reply, error, _ = await self._call_with_fallback(messages, "outfit photo matching")
+        reply, error, _ = await self._call_with_fallback(
+            messages, "outfit photo matching", use_match_model=True
+        )
         if reply is None:
             raise error or RuntimeError("AI returned nothing usable")
         return reply
