@@ -32,7 +32,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Google%20Play-Coming%20Soon-34A853?style=for-the-badge&logo=googleplay&logoColor=white" alt="Google Play - Coming Soon">
+  <a href="https://play.google.com/store/apps/details?id=app.wardrowbe.mobile">
+    <img src="https://img.shields.io/badge/Google%20Play-34A853?style=for-the-badge&logo=googleplay&logoColor=white" alt="Google Play">
+  </a>
   &nbsp;
   <a href="https://apps.apple.com/us/app/wardrowbe/id6759947671">
     <img src="https://img.shields.io/badge/App%20Store-0D96F6?style=for-the-badge&logo=appstore&logoColor=white" alt="App Store">
