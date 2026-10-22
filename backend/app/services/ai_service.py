@@ -5,6 +5,7 @@ import json
 import logging
 import math
 import re
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Literal
 
@@ -84,6 +85,9 @@ class ClothingTags(BaseModel):
 TAGGING_PROMPT = render_tagging_prompt(load_prompt("clothing_analysis"))
 DESCRIPTION_PROMPT = load_prompt("clothing_description")
 DETECTION_PROMPT = render_tagging_prompt(load_prompt("garment_detection"))
+OUTFIT_MATCH_PROMPT = load_prompt("outfit_photo_matching")
+# Candidate photos are small, there can be dozens, and the model only needs to recognise a garment.
+MATCH_THUMB_PX = 320
 DESCRIPTION_LANGUAGES = {
     "en": "English",
     "en-GB": "British English",
@@ -337,7 +341,7 @@ class AIService:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
-    def _preprocess_image(self, image_path: str | Path) -> str:
+    def _preprocess_image(self, image_path: str | Path, max_size: int | None = None) -> str:
         """
         Preprocess image for AI analysis.
         Returns base64-encoded JPEG string.
@@ -351,7 +355,7 @@ class AIService:
             img = ImageOps.exif_transpose(img)
 
             # Shrink for faster, cheaper AI calls; thumbnail() never enlarges
-            max_size = self.settings.ai_image_max_size
+            max_size = max_size or self.settings.ai_image_max_size
             img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
 
             # Convert to JPEG bytes
@@ -699,6 +703,44 @@ class AIService:
         if content is None:
             raise error or RuntimeError("AI returned nothing usable")
         return parse_detection(content)
+
+    async def match_outfit_photo(
+        self,
+        photo_path: str | Path,
+        garments: Sequence[tuple[int, str, Sequence[str]]],
+        candidates: Sequence[tuple[int, int, str | Path]],
+    ) -> str:
+        """Ask the vision model which of the candidate wardrobe photos each worn garment is.
+
+        garments: (garment number from 1, type, colours) for each garment found in the photo.
+        candidates: (candidate number, garment number it was shortlisted for, photo path).
+        Returns the model's raw reply; outfit_photo_matcher.parse_matches reads it.
+        """
+        photo_base64 = await asyncio.to_thread(self._preprocess_image, photo_path)
+        listing = "\n".join(
+            f"Garment {number}: {garment_type}" + (f", {', '.join(colors)}" if colors else "")
+            for number, garment_type, colors in garments
+        )
+        content: list[dict] = [
+            {"type": "text", "text": f"Garments worn in the photo:\n{listing}"},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{photo_base64}"}},
+        ]
+        for number, garment_number, path in candidates:
+            thumb = await asyncio.to_thread(self._preprocess_image, path, MATCH_THUMB_PX)
+            content.append(
+                {"type": "text", "text": f"Candidate {number} (garment {garment_number})"}
+            )
+            content.append(
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{thumb}"}}
+            )
+        messages = [
+            {"role": "system", "content": OUTFIT_MATCH_PROMPT},
+            {"role": "user", "content": content},
+        ]
+        reply, error, _ = await self._call_with_fallback(messages, "outfit photo matching")
+        if reply is None:
+            raise error or RuntimeError("AI returned nothing usable")
+        return reply
 
     async def check_health(self) -> dict:
         """Check health of all configured AI endpoints."""
