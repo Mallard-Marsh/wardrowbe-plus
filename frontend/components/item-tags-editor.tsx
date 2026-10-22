@@ -3,6 +3,7 @@
 import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -117,6 +118,29 @@ function ChipGroup({ label, values, selected, labelFor, onChange }: ChipGroupPro
   );
 }
 
+interface SizeFieldProps {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function SizeField({ label, placeholder, value, onChange }: SizeFieldProps) {
+  const id = useId();
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        value={value}
+        maxLength={32}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
 interface ItemTagsEditorProps {
   draft: TagDraft;
   onChange: (draft: TagDraft) => void;
@@ -190,6 +214,12 @@ export function ItemTagsEditor({ draft, onChange, primaryColor }: ItemTagsEditor
         options={labelled(FIT_VALUES, fitLabel)}
         describe={fitLabel}
         onChange={(fit) => onChange({ ...draft, fit })}
+      />
+      <SizeField
+        label={t('size')}
+        placeholder={t('sizePlaceholder')}
+        value={draft.size}
+        onChange={(size) => onChange({ ...draft, size })}
       />
 
       <ChipGroup

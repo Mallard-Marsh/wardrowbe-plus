@@ -358,7 +358,7 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
   // AI-generated tags
   const tags = item.tags || {};
   const hasAiTags = !!(tags.colors?.length || tags.pattern || tags.material ||
-                   tags.style?.length || tags.season?.length || tags.formality || tags.fit);
+                   tags.style?.length || tags.season?.length || tags.formality || tags.fit || tags.size);
 
   return (
     <>
@@ -686,6 +686,9 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
                     </label>
                   )}
                 </div>
+              )}
+              {isEditing && (
+                <p className="mt-2 text-xs text-muted-foreground">{t('labelPhotoHint')}</p>
               )}
             </div>
 
@@ -1110,6 +1113,11 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
                         {tags.fit && (
                           <Badge variant="outline" className="text-xs">
                             {t('view.fitBadge', { fit: fitLabel(tags.fit) })}
+                          </Badge>
+                        )}
+                        {tags.size && (
+                          <Badge variant="outline" className="text-xs">
+                            {t('view.sizeBadge', { size: tags.size })}
                           </Badge>
                         )}
                       </div>}

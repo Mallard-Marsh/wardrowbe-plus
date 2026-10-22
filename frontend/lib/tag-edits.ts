@@ -7,6 +7,7 @@ export interface TagChanges {
   material?: string | null;
   formality?: string | null;
   fit?: string | null;
+  size?: string | null;
   style?: string[];
   season?: string[];
   colors?: string[];
@@ -23,6 +24,8 @@ export interface TagDraft {
   material: string | null;
   formality: string | null;
   fit: string | null;
+  // Free text, as printed on the label ("M", "42", "W32 L30"). Empty means none.
+  size: string;
   style: string[];
   season: string[];
   // Secondary, tertiary and anything after them.
@@ -42,6 +45,7 @@ export function draftFromTags(tags: ItemTags): TagDraft {
     material: tags.material ?? null,
     formality: tags.formality ?? null,
     fit: tags.fit ?? null,
+    size: tags.size ?? '',
     style: [...(tags.style ?? [])],
     season: [...(tags.season ?? [])],
     extraColors: (tags.colors ?? []).filter((c) => c !== primary),
@@ -71,6 +75,8 @@ export function diffTags(
   for (const key of SINGLE_VALUE_KEYS) {
     if (draft[key] !== (original[key] ?? null)) changes[key] = draft[key];
   }
+  const size = draft.size.trim();
+  if (size !== (original.size ?? '')) changes.size = size === '' ? null : size;
   if (!sameList(draft.style, original.style ?? [])) changes.style = draft.style;
   if (!sameList(draft.season, original.season ?? [])) changes.season = draft.season;
 
