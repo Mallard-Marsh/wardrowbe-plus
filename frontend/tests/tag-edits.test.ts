@@ -28,6 +28,7 @@ describe('draftFromTags', () => {
       material: 'cotton',
       formality: 'casual',
       fit: 'slim',
+      size: '',
       style: ['preppy'],
       season: ['spring', 'summer'],
       extraColors: ['white'],
@@ -40,6 +41,7 @@ describe('draftFromTags', () => {
       material: null,
       formality: null,
       fit: null,
+      size: '',
       style: [],
       season: [],
       extraColors: [],
@@ -75,6 +77,20 @@ describe('diffTags', () => {
   it('reports only the keys that changed', () => {
     const draft = { ...draftFromTags(tags), pattern: 'plaid', fit: 'relaxed' }
     expect(diffTags(tags, draft, 'navy')).toEqual({ pattern: 'plaid', fit: 'relaxed' })
+  })
+
+  it('reads a size into the draft and writes a changed one back, trimmed', () => {
+    const sized: ItemTags = { ...tags, size: 'M' }
+    expect(draftFromTags(sized).size).toBe('M')
+    expect(diffTags(sized, draftFromTags(sized), 'navy')).toEqual({})
+    expect(diffTags(sized, { ...draftFromTags(sized), size: '  L ' }, 'navy')).toEqual({ size: 'L' })
+    expect(diffTags(tags, { ...draftFromTags(tags), size: '42' }, 'navy')).toEqual({ size: '42' })
+  })
+
+  it('clears a size with null when it is emptied, and ignores a blank on an item without one', () => {
+    const sized: ItemTags = { ...tags, size: 'M' }
+    expect(diffTags(sized, { ...draftFromTags(sized), size: '   ' }, 'navy')).toEqual({ size: null })
+    expect(diffTags(tags, { ...draftFromTags(tags), size: '  ' }, 'navy')).toEqual({})
   })
 
   it('uses null to clear a tag', () => {

@@ -180,6 +180,7 @@
       "washed": "單品已標記為已洗"
     },
     "brand": "品牌",
+    "labelPhotoHint": "新增一張標籤特寫作為額外照片，AI 就能讀取品牌與尺寸。",
     "name": "名稱",
     "notes": "備註",
     "placeholders": {
@@ -206,6 +207,8 @@
       "pattern": "圖案",
       "season": "季節",
       "secondaryColor": "次要顏色",
+      "size": "尺寸",
+      "sizePlaceholder": "例如 M、42、W32 L30",
       "style": "風格",
       "tertiaryColor": "第三顏色",
       "title": "AI 標籤"
@@ -245,6 +248,7 @@
       "needsWashing": "需要洗滌",
       "never": "從未",
       "primaryImage": "主要",
+      "sizeBadge": "尺寸 {size}",
       "timeline": "{count, plural, one {時間軸（# 筆紀錄）} other {時間軸（# 筆紀錄）}}",
       "today": "今天",
       "totalWears": "總穿著次數",
