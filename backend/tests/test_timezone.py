@@ -28,6 +28,21 @@ class TestZoneinfoDataInImage:
         assert summer.utcoffset().total_seconds() == -4 * 3600
 
 
+class TestZoneNameThatIsAFolder:
+    @pytest.mark.parametrize("error", [IsADirectoryError, PermissionError, OSError])
+    def test_a_filesystem_error_reads_as_an_unknown_zone(self, error):
+        with patch("app.utils.timezone.ZoneInfo", side_effect=error("tzdata/America")):
+            assert not is_valid_timezone("America")
+
+    def test_a_folder_name_falls_back_to_utc(self):
+        resolve_timezone.cache_clear()
+        with patch(
+            "app.utils.timezone.ZoneInfo", side_effect=[IsADirectoryError("x"), ZoneInfo("UTC")]
+        ):
+            assert str(resolve_timezone("America")) == "UTC"
+        resolve_timezone.cache_clear()
+
+
 class TestIsValidTimezone:
     @pytest.mark.parametrize("name", ["UTC", "America/New_York", "Asia/Kathmandu", "Etc/GMT+5"])
     def test_known_zones_are_valid(self, name):
