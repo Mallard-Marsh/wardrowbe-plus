@@ -38,6 +38,9 @@ const LABEL_HEIGHT = 0.05;
 // 85% of the canvas height.
 const UPGRADE_CAP = 0.85;
 const CAP_REFERENCE_CM = 100;
+// An earlier (preferred) arrangement is used unless a later one allows a scale more than this much
+// bigger, i.e. it keeps at least 90% of the best scale.
+const PREFERENCE_TOLERANCE = 0.9;
 
 // Roles read top to bottom the way a person is dressed. The main group holds the body of the
 // outfit, the side group the pieces that sit around it.
@@ -279,6 +282,10 @@ export function layoutFlatLay(entries: FlatLayEntry[], format: FlatLayFormat): F
   // it can hold); drop it rather than draw a broken picture.
   const valid = candidates.filter((c) => Number.isFinite(c.scale) && c.scale > 0);
   if (valid.length === 0) return [];
-  const best = valid.reduce((a, b) => (b.scale > a.scale ? b : a));
-  return best.place(best.scale);
+  // Candidates are listed in order of preference (columns before a single row). A row only wins
+  // when it lets the garments be drawn clearly bigger: a row of three on a square canvas is a
+  // thin band with empty space above and below, where columns fill the picture.
+  const largest = Math.max(...valid.map((c) => c.scale));
+  const chosen = valid.find((c) => c.scale >= largest * PREFERENCE_TOLERANCE) ?? valid[0];
+  return chosen.place(chosen.scale);
 }
