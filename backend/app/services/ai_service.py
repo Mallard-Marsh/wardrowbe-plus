@@ -706,33 +706,37 @@ class AIService:
 
     async def match_outfit_photo(
         self,
-        photo_path: str | Path,
-        garments: Sequence[tuple[int, str, Sequence[str]]],
+        garments: Sequence[tuple[int, str, Sequence[str], bytes]],
         candidates: Sequence[tuple[int, int, str | Path]],
     ) -> str:
         """Ask the vision model which of the candidate wardrobe photos each worn garment is.
 
-        garments: (garment number from 1, type, colours) for each garment found in the photo.
+        garments: (garment number from 1, type, colours, JPEG close-up of it cut from the photo).
         candidates: (candidate number, garment number it was shortlisted for, photo path).
+        Each garment is shown with its own close-up followed by its candidates, so the model
+        compares like with like rather than hunting for the garment in a whole photo.
         Returns the model's raw reply; outfit_photo_matcher.parse_matches reads it.
         """
-        photo_base64 = await asyncio.to_thread(self._preprocess_image, photo_path)
-        listing = "\n".join(
-            f"Garment {number}: {garment_type}" + (f", {', '.join(colors)}" if colors else "")
-            for number, garment_type, colors in garments
-        )
-        content: list[dict] = [
-            {"type": "text", "text": f"Garments worn in the photo:\n{listing}"},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{photo_base64}"}},
-        ]
-        for number, garment_number, path in candidates:
-            thumb = await asyncio.to_thread(self._preprocess_image, path, MATCH_THUMB_PX)
-            content.append(
-                {"type": "text", "text": f"Candidate {number} (garment {garment_number})"}
+        content: list[dict] = []
+        for number, garment_type, colors, crop in garments:
+            label = f"Garment {number}: {garment_type}" + (
+                f", {', '.join(colors)}" if colors else ""
             )
+            crop_base64 = base64.b64encode(crop).decode("utf-8")
+            content.append({"type": "text", "text": label})
             content.append(
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{thumb}"}}
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{crop_base64}"}}
             )
+            for candidate_number, garment_number, path in candidates:
+                if garment_number != number:
+                    continue
+                thumb = await asyncio.to_thread(self._preprocess_image, path, MATCH_THUMB_PX)
+                content.append(
+                    {"type": "text", "text": f"Candidate {candidate_number} (garment {number})"}
+                )
+                content.append(
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{thumb}"}}
+                )
         messages = [
             {"role": "system", "content": OUTFIT_MATCH_PROMPT},
             {"role": "user", "content": content},

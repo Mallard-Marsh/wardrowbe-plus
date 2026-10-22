@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { List as ListIcon, CalendarDays, Plus, Search, CheckSquare } from 'lucide-react';
+import { List as ListIcon, CalendarDays, Camera, Plus, Search, CheckSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { OutfitCard } from '@/components/outfits/outfit-card';
+import { LogFromPhotoDialog } from '@/components/outfits/log-from-photo-dialog';
 import { OutfitCalendar } from '@/components/outfit-calendar';
 import { BulkActionToolbar, BulkSelection } from '@/components/bulk-action-toolbar';
 import {
@@ -161,6 +162,7 @@ function OutfitsPageContent() {
   }, [pickedMonth, todayKey]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectMode, setSelectMode] = useState(false);
+  const [showLogFromPhoto, setShowLogFromPhoto] = useState(false);
   const [selection, setSelection] = useState<BulkSelection>({
     mode: 'none',
     selectedIds: new Set(),
@@ -448,6 +450,10 @@ function OutfitsPageContent() {
               {selectMode ? tc('cancel') : t('bulkActions.select')}
             </Button>
           )}
+          <Button variant="outline" onClick={() => setShowLogFromPhoto(true)}>
+            <Camera className="h-4 w-4 mr-2" />
+            {t('logFromPhoto.button')}
+          </Button>
           <Button asChild>
             <Link href="/dashboard/outfits/new">
               <Plus className="h-4 w-4 mr-2" />
@@ -456,6 +462,10 @@ function OutfitsPageContent() {
           </Button>
         </div>
       </div>
+
+      {showLogFromPhoto && (
+        <LogFromPhotoDialog open onClose={() => setShowLogFromPhoto(false)} />
+      )}
 
       {view === 'list' && (
       <div className="flex items-center gap-3 flex-wrap">
