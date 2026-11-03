@@ -20,6 +20,7 @@ DEFAULT_PREFERENCES_RESPONSE = {
     "avoid_repeat_days": 7,
     "prefer_underused_items": True,
     "variety_level": "moderate",
+    "track_laundry": True,
     "ai_endpoints": [],
 }
 
@@ -197,3 +198,42 @@ class TestPreferenceDefaults:
         response = _build_preference_response(SimpleNamespace(**dict.fromkeys(fields)))
 
         assert response.model_dump() == DEFAULT_PREFERENCES_RESPONSE
+
+
+class TestLaundryTracking:
+    """Wear and wash tracking is on unless turned off, and lives in occasion_preferences."""
+
+    def test_on_when_nothing_is_stored(self):
+        assert UserPreference(occasion_preferences=None).track_laundry is True
+        assert UserPreference(occasion_preferences={}).track_laundry is True
+
+    def test_turning_it_off_keeps_other_occasion_preferences(self):
+        prefs = UserPreference(occasion_preferences={"other": 1})
+        prefs.track_laundry = False
+
+        assert prefs.occasion_preferences == {"other": 1, "track_laundry": False}
+        assert prefs.track_laundry is False
+
+    @pytest.mark.asyncio
+    async def test_can_be_turned_off_and_on_again(
+        self, client: AsyncClient, test_user_with_preferences, auth_headers
+    ):
+        url = "/api/v1/users/me/preferences"
+        off = await client.patch(url, json={"track_laundry": False}, headers=auth_headers)
+        assert off.status_code == 200
+        assert off.json()["track_laundry"] is False
+        assert (await client.get(url, headers=auth_headers)).json()["track_laundry"] is False
+
+        on = await client.patch(url, json={"track_laundry": True}, headers=auth_headers)
+        assert on.json()["track_laundry"] is True
+
+    @pytest.mark.asyncio
+    async def test_an_unrelated_change_leaves_it_off(
+        self, client: AsyncClient, test_user_with_preferences, auth_headers
+    ):
+        url = "/api/v1/users/me/preferences"
+        await client.patch(url, json={"track_laundry": False}, headers=auth_headers)
+
+        response = await client.patch(url, json={"variety_level": "high"}, headers=auth_headers)
+
+        assert response.json()["track_laundry"] is False

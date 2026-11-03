@@ -36,6 +36,7 @@ import { toast } from 'sonner';
 import { formatWornAgo, getWornAgoColorClass } from '@/lib/utils';
 import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 import { useTranslations } from 'next-intl';
+import { useLaundryTracking } from '@/lib/hooks/use-preferences';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
@@ -78,6 +79,7 @@ function ItemCard({
   errorDismissed?: boolean;
   userTimezone: string;
 }) {
+  const tracksLaundry = useLaundryTracking();
   const typeLabel = useTypeLabel();
   const t = useTranslations('wardrobe');
   const tc = useTranslations('common');
@@ -136,7 +138,7 @@ function ItemCard({
             <Heart className="h-4 w-4 fill-red-500 text-red-500" />
           </div>
         )}
-        {item.needs_wash && (
+        {tracksLaundry && item.needs_wash && (
           <div className="absolute bottom-2 right-2 z-10">
             <div className="bg-amber-500/90 text-white rounded-full p-1" title={t('needsWash')}>
               <Droplets className="h-3.5 w-3.5" />
@@ -346,6 +348,9 @@ export default function WardrobePage() {
   const [needsWash, setNeedsWash] = useState<boolean | undefined>(() =>
     searchParams.get('needsWash') === 'true' ? true : undefined
   );
+  // With wear and wash tracking off, the "needs wash" filter is hidden and ignored.
+  const tracksLaundry = useLaundryTracking();
+  const washFilter = tracksLaundry ? needsWash : undefined;
   const [favoriteFilter, setFavoriteFilter] = useState<boolean | undefined>(() =>
     searchParams.get('favorite') === 'true' ? true : undefined
   );
@@ -410,7 +415,7 @@ export default function WardrobePage() {
   const filters = {
     search: search || undefined,
     type: typeFilter !== 'all' ? typeFilter : undefined,
-    needs_wash: needsWash,
+    needs_wash: washFilter,
     favorite: favoriteFilter,
     is_archived: false,
     sort_by: sortOption.value,
@@ -418,7 +423,7 @@ export default function WardrobePage() {
   };
 
   const activeFilterCount = [
-    needsWash !== undefined,
+    washFilter !== undefined,
     favoriteFilter !== undefined,
     typeFilter !== 'all',
   ].filter(Boolean).length;
@@ -544,7 +549,7 @@ export default function WardrobePage() {
         filters: {
           type: typeFilter !== 'all' ? typeFilter : undefined,
           search: search || undefined,
-          needs_wash: needsWash,
+          needs_wash: washFilter,
           favorite: favoriteFilter,
           is_archived: false,
         },
@@ -815,6 +820,7 @@ export default function WardrobePage() {
               </SelectContent>
             </Select>
 
+            {tracksLaundry && (
             <Button
               variant={needsWash === true ? 'default' : 'outline'}
               size="sm"
@@ -827,6 +833,7 @@ export default function WardrobePage() {
               <Droplets className="h-3.5 w-3.5" />
               {t('needsWash')}
             </Button>
+            )}
 
             <Button
               variant={favoriteFilter === true ? 'default' : 'outline'}
@@ -881,7 +888,7 @@ export default function WardrobePage() {
           ))}
         </div>
       ) : items.length === 0 ? (
-        search || typeFilter !== 'all' || needsWash !== undefined || favoriteFilter !== undefined ? (
+        search || typeFilter !== 'all' || washFilter !== undefined || favoriteFilter !== undefined ? (
           <div className="text-center py-8">
             <p className="text-muted-foreground">
               {t('errors.noItemsFound')}

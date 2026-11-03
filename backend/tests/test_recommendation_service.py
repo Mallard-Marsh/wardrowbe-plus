@@ -1070,3 +1070,40 @@ class TestHotDayLegwear:
         await self._hot_day_outfits(db_session, test_user, [[3, 2, 4]], cached={"items": [2, 4]})
         assert self.reasonings == ["AI 1"]
         self.ai.generate_text.assert_awaited_once()
+
+
+class TestCandidatesWhenWashingIsNotTracked:
+    async def _candidates(self, db_session, user, track_laundry: bool) -> set:
+        clean = ClothingItem(
+            user_id=user.id, image_path="a.jpg", type="t-shirt", status=ItemStatus.ready
+        )
+        dirty = ClothingItem(
+            user_id=user.id,
+            image_path="b.jpg",
+            type="jeans",
+            status=ItemStatus.ready,
+            needs_wash=True,
+        )
+        db_session.add_all([clean, dirty])
+        await db_session.commit()
+        prefs = UserPreference(user_id=user.id, occasion_preferences={})
+        prefs.track_laundry = track_laundry
+
+        items = await RecommendationService(db_session).get_candidate_items(
+            user, _weather(), "casual", prefs, []
+        )
+        return {i.id for i in items} & {clean.id, dirty.id}, clean, dirty
+
+    @pytest.mark.asyncio
+    async def test_items_that_need_a_wash_are_skipped_while_washing_is_tracked(
+        self, db_session, test_user
+    ):
+        ids, clean, _ = await self._candidates(db_session, test_user, True)
+        assert ids == {clean.id}
+
+    @pytest.mark.asyncio
+    async def test_items_that_need_a_wash_are_suggested_once_washing_is_not_tracked(
+        self, db_session, test_user
+    ):
+        ids, clean, dirty = await self._candidates(db_session, test_user, False)
+        assert ids == {clean.id, dirty.id}

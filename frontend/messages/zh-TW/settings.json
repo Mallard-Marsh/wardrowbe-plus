@@ -108,6 +108,8 @@
     "no": "否",
     "preferUnderused": "優先使用低頻單品",
     "title": "推薦設定",
+    "trackLaundry": "記錄穿著和清洗",
+    "trackLaundryDescription": "在衣物上顯示「記錄穿著」「標記為已洗」和洗滌狀態。關閉後將隱藏這些內容，推薦中也會包含需要清洗的衣物，並停止洗衣提醒。",
     "varietyLevel": "多樣程度",
     "varietyOptions": {
       "high": "高（嘗試新組合）",

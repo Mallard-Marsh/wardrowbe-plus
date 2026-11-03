@@ -108,6 +108,8 @@
     "no": "No",
     "preferUnderused": "Preferisci capi poco usati",
     "title": "Impostazioni suggerimenti",
+    "trackLaundry": "Tieni traccia di utilizzi e lavaggi",
+    "trackLaundryDescription": "Mostra «Registra utilizzo», «Segna come lavato» e lo stato di lavaggio sui tuoi capi. Se disattivato, questi elementi vengono nascosti, i suggerimenti includono anche i capi da lavare e i promemoria del bucato si interrompono.",
     "varietyLevel": "Livello di varietà",
     "varietyOptions": {
       "high": "Alto (prova nuove combinazioni)",

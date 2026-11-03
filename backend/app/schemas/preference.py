@@ -124,6 +124,10 @@ class PreferenceBase(BaseModel):
         pattern="^(low|moderate|high)$",
         description="Outfit variety preference",
     )
+    track_laundry: bool = Field(
+        default=True,
+        description="Track wears and washing; when off, items that need a wash are still suggested",
+    )
 
     # AI Settings
     ai_endpoints: list[AIEndpoint] = Field(
@@ -151,6 +155,7 @@ class PreferenceUpdate(BaseModel):
     )
     prefer_underused_items: bool | None = None
     variety_level: str | None = Field(default=None, pattern="^(low|moderate|high)$")
+    track_laundry: bool | None = None
     ai_endpoints: list[AIEndpoint] | None = None
 
 

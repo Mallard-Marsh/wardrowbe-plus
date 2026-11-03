@@ -108,6 +108,8 @@
     "no": "Non",
     "preferUnderused": "Préférer les articles sous-utilisés",
     "title": "Paramètres de recommandation",
+    "trackLaundry": "Suivre les ports et les lavages",
+    "trackLaundryDescription": "Affiche « Noter un port », « Marquer comme lavé » et l’état de lavage sur vos vêtements. Désactivé, ces éléments sont masqués, les suggestions incluent les vêtements à laver et les rappels de lessive s’arrêtent.",
     "varietyLevel": "Niveau de variété",
     "varietyOptions": {
       "high": "Élevé (essayer de nouvelles combinaisons)",

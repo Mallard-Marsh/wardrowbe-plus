@@ -108,6 +108,8 @@
     "no": "いいえ",
     "preferUnderused": "あまり着ていないアイテムを優先",
     "title": "おすすめ設定",
+    "trackLaundry": "着用と洗濯を記録",
+    "trackLaundryDescription": "衣類に「着用を記録」「洗濯済みにする」と洗濯状況を表示します。オフにすると非表示になり、洗濯が必要な衣類も提案に含まれ、洗濯リマインダーは届かなくなります。",
     "varietyLevel": "バリエーションの度合い",
     "varietyOptions": {
       "high": "高（新しい組み合わせを試す）",

@@ -64,6 +64,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { toast } from 'sonner';
 import { SplitPhotoDialog } from '@/components/split-photo-dialog';
 import { useUpdateItem, useDeleteItem, useReanalyzeItem, useRotateImage, useRemoveBackground, useRestoreOriginal, useReplaceItemImage, useLogWear, useLogWash, useWashHistory, useItemWearStats, useItemWearHistory, useAddItemImage, useDeleteItemImage, useSetPrimaryImage } from '@/lib/hooks/use-items';
+import { useLaundryTracking } from '@/lib/hooks/use-preferences';
 import { CLOTHING_SUBTYPES, Item } from '@/lib/types';
 import {
   useClothingTypes,
@@ -179,6 +180,7 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
   const replaceImage = useReplaceItemImage();
   const replaceImageInputRef = useRef<HTMLInputElement>(null);
   const { data: features } = useFeatures();
+  const tracksLaundry = useLaundryTracking();
   const logWear = useLogWear();
   const logWash = useLogWash();
   const { data: washHistory } = useWashHistory(item?.id || '');
@@ -793,6 +795,7 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
                       rows={3}
                     />
                   </div>
+                  {tracksLaundry && (
                   <div className="space-y-2">
                     <Label>{t('washInterval')} ({t('view.wears')})</Label>
                     <Input
@@ -807,6 +810,7 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
                       {t('view.washIntervalHint')}
                     </p>
                   </div>
+                  )}
                   <ItemTagsEditor
                     draft={tagDraft}
                     onChange={setTagDraft}
@@ -880,7 +884,8 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
                     )}
                   </div>
 
-                  {/* Wash Status */}
+                  {/* Wash Status: hidden when wears and washing aren't tracked */}
+                  {tracksLaundry && (
                   <div className="space-y-2 pt-2 border-t">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm font-medium">
@@ -955,6 +960,7 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
                       </Collapsible>
                     )}
                   </div>
+                  )}
 
                   {/* Wear History */}
                   {item.wear_count > 0 && wearStats && (
