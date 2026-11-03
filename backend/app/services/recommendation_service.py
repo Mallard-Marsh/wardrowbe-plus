@@ -236,7 +236,10 @@ class RecommendationService:
         if not items:
             return []
 
-        items = [i for i in items if not i.needs_wash]
+        # Someone who doesn't track washing never marks anything washed, so "needs a wash" would
+        # slowly hide their whole wardrobe.
+        if preferences is None or preferences.track_laundry:
+            items = [i for i in items if not i.needs_wash]
         items = [i for i in items if i.type and i.type != "unknown"]
 
         if exclude_items:

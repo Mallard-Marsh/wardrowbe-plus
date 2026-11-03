@@ -18,6 +18,13 @@ export function usePreferences() {
   });
 }
 
+// Whether wears and washing are tracked (the "Log wear" and "Mark washed" controls and
+// everything about washing). On until the preferences say otherwise.
+export function useLaundryTracking(): boolean {
+  const { data } = usePreferences();
+  return data?.track_laundry ?? true;
+}
+
 export function useUpdatePreferences() {
   const queryClient = useQueryClient();
   const { data: session } = useSession();

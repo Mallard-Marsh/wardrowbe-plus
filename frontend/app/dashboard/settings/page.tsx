@@ -1012,6 +1012,19 @@ export default function SettingsPage() {
                 </Select>
               </div>
             </div>
+            <div className="flex items-start justify-between gap-4 pt-2">
+              <div className="space-y-1">
+                <Label htmlFor="track-laundry">{t('recommendations.trackLaundry')}</Label>
+                <p className="text-sm text-muted-foreground">
+                  {t('recommendations.trackLaundryDescription')}
+                </p>
+              </div>
+              <Switch
+                id="track-laundry"
+                checked={formData.track_laundry ?? true}
+                onCheckedChange={(checked) => updateField('track_laundry', checked)}
+              />
+            </div>
           </CardContent>
         </Card>
 

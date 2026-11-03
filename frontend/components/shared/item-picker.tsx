@@ -11,6 +11,7 @@ import { GRID_PAGE_SIZE } from '@/lib/pagination';
 import type { Item } from '@/lib/types';
 import { useTranslations } from 'next-intl';
 import { useTypeLabel } from '@/lib/hooks/use-translated-constants';
+import { useLaundryTracking } from '@/lib/hooks/use-preferences';
 
 
 interface ItemPickerProps {
@@ -32,6 +33,7 @@ export function ItemPicker({
 }: ItemPickerProps) {
   const typeLabel = useTypeLabel();
   const t = useTranslations('outfits.itemPicker');
+  const tracksLaundry = useLaundryTracking();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -54,7 +56,7 @@ export function ItemPicker({
       search: debouncedSearch || undefined,
       is_archived: false,
       type: filterType,
-      needs_wash: hideNeedsWash ? false : undefined,
+      needs_wash: hideNeedsWash && tracksLaundry ? false : undefined,
     },
     page,
     GRID_PAGE_SIZE

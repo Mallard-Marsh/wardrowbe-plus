@@ -61,6 +61,7 @@ def _build_preference_response(preferences) -> PreferenceResponse:
         variety_level=preferences.variety_level
         if preferences.variety_level is not None
         else DEFAULT_VARIETY_LEVEL,
+        track_laundry=preferences.track_laundry if preferences.track_laundry is not None else True,
         ai_endpoints=preferences.ai_endpoints if preferences.ai_endpoints is not None else [],
     )
 

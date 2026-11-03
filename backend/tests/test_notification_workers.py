@@ -15,6 +15,7 @@ from app.config import Settings
 from app.models.item import ClothingItem
 from app.models.notification import Notification, NotificationSettings, NotificationStatus
 from app.models.outfit import Outfit, OutfitSource, OutfitStatus
+from app.models.preference import UserPreference
 from app.models.schedule import Schedule
 from app.models.user import User
 from app.services.notification_providers import EXPO_PUSH_URL
@@ -566,6 +567,25 @@ class TestWashReminderChannels:
             )
         )
         return list(result.scalars().all())
+
+    @pytest.mark.asyncio
+    async def test_no_reminder_when_wear_and_wash_tracking_is_off(
+        self, db_session: AsyncSession, dirty_user: User
+    ):
+        prefs = UserPreference(user_id=dirty_user.id, occasion_preferences={})
+        prefs.track_laundry = False
+        db_session.add(prefs)
+        await db_session.commit()
+        key = uuid.uuid4().hex
+        await self._add_channel(
+            db_session, dirty_user, "ntfy", {"server": "https://ntfy.sh", "topic": key}, 1
+        )
+        post = _fake_post()
+
+        await self._run(db_session, post)
+
+        assert not [c for c in post.call_args_list if key in str(c)]
+        assert await self._reminders(db_session, dirty_user) == []
 
     @pytest.mark.asyncio
     async def test_bad_stored_timezone_still_gets_reminder(

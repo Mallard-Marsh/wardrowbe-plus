@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.database import Base
 from app.utils.preference_defaults import (
@@ -80,3 +81,15 @@ class UserPreference(Base):
 
     # Relationship
     user: Mapped["User"] = relationship("User", back_populates="preferences")
+
+    # Whether wears and washing are tracked: the "Log wear" and "Mark washed" controls, skipping
+    # items that need a wash in suggestions, and laundry reminders. Kept in the occasion_preferences
+    # JSONB (otherwise unused) so the setting needs no migration.
+    @property
+    def track_laundry(self) -> bool:
+        return bool((self.occasion_preferences or {}).get("track_laundry", True))
+
+    @track_laundry.setter
+    def track_laundry(self, value: bool) -> None:
+        self.occasion_preferences = {**(self.occasion_preferences or {}), "track_laundry": value}
+        flag_modified(self, "occasion_preferences")

@@ -11,6 +11,7 @@ from app.models.item import ClothingItem
 from app.models.learning import UserLearningProfile
 from app.models.notification import Notification, NotificationStatus
 from app.models.outfit import Outfit, OutfitSource, OutfitStatus, TimeOfDay
+from app.models.preference import UserPreference
 from app.models.schedule import Schedule
 from app.models.user import User
 from app.services.ai_service import AIDisabledError
@@ -363,6 +364,16 @@ async def _check_wash_reminders_inner(ctx: dict):
             if uid not in user_items:
                 user_items[uid] = []
             user_items[uid].append(item)
+
+        # No laundry reminders for anyone who has turned wear and wash tracking off.
+        untracked = await db.execute(
+            select(UserPreference.user_id).where(
+                UserPreference.user_id.in_([UUID(uid) for uid in user_items]),
+                UserPreference.occasion_preferences["track_laundry"].astext == "false",
+            )
+        )
+        for uid in untracked.scalars():
+            user_items.pop(str(uid), None)
 
         dispatcher = NotificationDispatcher(db)
         notified = 0

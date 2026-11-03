@@ -108,6 +108,8 @@
     "no": "아니요",
     "preferUnderused": "덜 입은 아이템 우선",
     "title": "추천 설정",
+    "trackLaundry": "착용 및 세탁 기록",
+    "trackLaundryDescription": "옷에 '착용 기록', '세탁 완료 표시' 및 세탁 상태를 표시합니다. 끄면 이 항목이 숨겨지고, 세탁이 필요한 옷도 추천에 포함되며, 세탁 알림이 중지됩니다.",
     "varietyLevel": "다양성 수준",
     "varietyOptions": {
       "high": "높음 (새로운 조합 시도)",

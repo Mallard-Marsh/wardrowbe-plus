@@ -108,6 +108,8 @@
     "no": "Nein",
     "preferUnderused": "Selten getragene Stücke bevorzugen",
     "title": "Empfehlungseinstellungen",
+    "trackLaundry": "Tragen und Waschen erfassen",
+    "trackLaundryDescription": "Zeigt „Tragen erfassen“, „Als gewaschen markieren“ und den Waschstatus bei deiner Kleidung. Wenn aus, wird das ausgeblendet, Vorschläge enthalten auch Kleidung, die gewaschen werden müsste, und Wäsche-Erinnerungen werden nicht mehr gesendet.",
     "varietyLevel": "Abwechslungsgrad",
     "varietyOptions": {
       "high": "Hoch (neue Kombinationen ausprobieren)",

@@ -165,6 +165,7 @@ export interface Preferences {
   avoid_repeat_days: number;
   prefer_underused_items: boolean;
   variety_level: 'low' | 'moderate' | 'high';
+  track_laundry: boolean;
   ai_endpoints: AIEndpoint[];
 }
 

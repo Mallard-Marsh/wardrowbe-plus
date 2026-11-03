@@ -108,6 +108,8 @@
     "no": "No",
     "preferUnderused": "Prefer Underused Items",
     "title": "Recommendation Settings",
+    "trackLaundry": "Track wears and washing",
+    "trackLaundryDescription": "Show Log wear, Mark Washed and Wash Status on your clothes. When off, these are hidden, suggestions include clothes that would need a wash, and laundry reminders stop.",
     "varietyLevel": "Variety Level",
     "varietyOptions": {
       "high": "High (try new combinations)",
