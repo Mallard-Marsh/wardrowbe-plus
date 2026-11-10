@@ -97,9 +97,6 @@
     "deleteError": "刪除單品失敗",
     "deletePartialFailed": "{count, plural, one {刪除 # 件單品失敗} other {刪除 # 件單品失敗}}",
     "deleteSuccess": "{count, plural, one {已刪除 # 件單品} other {已刪除 # 件單品}}",
-    "reanalyzeAndReplaceConfirmAction": "重新分析並取代",
-    "reanalyzeAndReplaceConfirmDescription": "AI 會重新查看每張照片並取代先前的判斷。你自己編輯過的標籤會保留。此功能推出之前所做的修改沒有被記錄，因此也可能被取代。每件單品會使用一次 AI 請求，可能需要一些時間。",
-    "reanalyzeAndReplaceConfirmTitle": "重新分析並取代 {count, plural, other {# 件}}單品的 AI 標籤？",
     "reanalyzeCooldown": "{count, plural, one {# item cooling down after a recent failure} other {# items cooling down after a recent failure}}",
     "reanalyzeError": "排入重新分析失敗",
     "reanalyzeMany": "已排入 {count} 件重新分析。這可能需要一些時間。",
@@ -116,7 +113,10 @@
     "rotateError": "Failed to rotate items",
     "rotatePartialFailed": "{count, plural, one {Failed to rotate # item} other {Failed to rotate # items}}",
     "rotateQueued": "{count, plural, one {Queued # item for rotation} other {Queued # items for rotation}}",
-    "rotateSkipped": "{count, plural, one {# item skipped (already processing)} other {# items skipped (already processing)}}"
+    "rotateSkipped": "{count, plural, one {# item skipped (already processing)} other {# items skipped (already processing)}}",
+    "reanalyzeAndReplaceConfirmAction": "重新分析並取代",
+    "reanalyzeAndReplaceConfirmDescription": "AI 會重新查看每張照片並取代先前的判斷。你自己編輯過的標籤會保留。此功能推出之前所做的修改沒有被記錄，因此也可能被取代。每件單品會使用一次 AI 請求，可能需要一些時間。",
+    "reanalyzeAndReplaceConfirmTitle": "重新分析並取代 {count, plural, other {# 件}}單品的 AI 標籤？"
   },
   "bulkDelete": {
     "confirmDescription": "這將永久刪除所選單品及其圖片。此操作無法復原。",
@@ -153,7 +153,6 @@
   "itemCount": "{count, plural, one {衣櫥中有 # 件單品} other {衣櫥中有 # 件單品}}",
   "itemDetail": {
     "actions": {
-      "backgroundRemovalStarted": "正在移除背景…",
       "backgroundRemoveError": "移除背景失敗",
       "backgroundRemoved": "背景已移除",
       "cancelEditing": "取消編輯",
@@ -173,14 +172,15 @@
       "markWashed": "標記為已洗",
       "originalRestoreError": "還原原圖失敗",
       "originalRestored": "原圖已還原",
+      "saveError": "儲存單品失敗",
       "washError": "標記為已洗失敗",
       "logWear": "記錄穿著",
       "wearLogged": "已記錄穿著",
       "wearLogError": "記錄穿著失敗",
-      "washed": "單品已標記為已洗"
+      "washed": "單品已標記為已洗",
+      "backgroundRemovalStarted": "正在移除背景…"
     },
     "brand": "品牌",
-    "labelPhotoHint": "新增一張標籤特寫作為額外照片，AI 就能讀取品牌與尺寸。",
     "name": "名稱",
     "notes": "備註",
     "placeholders": {
@@ -188,36 +188,31 @@
       "brandName": "品牌名稱",
       "itemName": "單品名稱",
       "selectColor": "選擇顏色",
-      "subtype": "例如：內搭褲、切爾西",
+      "subtype": "例如：卡其褲、切爾西",
       "washIntervalDefault": "預設：{count}"
     },
     "primaryColor": "主色",
-    "replaceAnalysis": {
-      "confirm": "重新分析並取代",
-      "description": "AI 會重新查看照片並取代先前的判斷。你自己編輯過的標籤會保留。此功能推出之前所做的修改沒有被記錄，因此也可能被取代。",
-      "title": "重新分析並取代 AI 標籤？"
-    },
     "subtype": "子類型",
     "tagsEditor": {
       "fit": "版型",
       "formality": "正式程度",
       "hint": "修正 AI 辨識錯誤的地方。重新分析單品後，你的修改會保留。",
+      "invalidValue": "有標籤的值不在清單中。請重新選擇後儲存。",
       "material": "材質",
       "none": "無",
       "pattern": "圖案",
       "season": "季節",
       "secondaryColor": "次要顏色",
-      "size": "尺寸",
-      "sizePlaceholder": "例如 M、42、W32 L30",
       "style": "風格",
       "tertiaryColor": "第三顏色",
-      "title": "AI 標籤"
+      "title": "AI 標籤",
+      "size": "尺寸",
+      "sizePlaceholder": "例如 M、42、W32 L30"
     },
     "titles": {
       "analysisInProgress": "分析進行中...",
       "deleteImage": "刪除圖片",
       "findMatchingOutfits": "尋找搭配穿搭",
-      "reanalyzeAndReplace": "重新分析並取代 AI 標籤",
       "reanalyzeWithAI": "用 AI 重新分析",
       "removeBackground": "移除背景",
       "replaceImage": "替換圖片",
@@ -227,7 +222,8 @@
       "splitPhoto": "拆分照片",
       "suggestOutfit": "用這件衣物建立穿搭",
       "toggleFavorite": "切換收藏",
-      "undoBackgroundRemoval": "復原背景移除"
+      "undoBackgroundRemoval": "復原背景移除",
+      "reanalyzeAndReplace": "重新分析並取代 AI 標籤"
     },
     "type": "類型",
     "unrecognizedType": "AI 辨識為「{value}」，但這不是支援的類型。請在下方選擇最接近的類型；可以將「{value}」保留為子類型。",
@@ -248,7 +244,6 @@
       "needsWashing": "需要洗滌",
       "never": "從未",
       "primaryImage": "主要",
-      "sizeBadge": "尺寸 {size}",
       "timeline": "{count, plural, one {時間軸（# 筆紀錄）} other {時間軸（# 筆紀錄）}}",
       "today": "今天",
       "totalWears": "總穿著次數",
@@ -259,9 +254,16 @@
       "wearHistory": "穿著紀錄",
       "wears": "次穿著",
       "wearsSinceWash": "洗滌後穿著次數：{current}/{max}",
-      "wornCount": "{count, plural, one {已穿著 # 次} other {已穿著 # 次}}"
+      "wornCount": "{count, plural, one {已穿著 # 次} other {已穿著 # 次}}",
+      "sizeBadge": "尺寸 {size}"
     },
-    "washInterval": "洗滌間隔"
+    "washInterval": "洗滌間隔",
+    "labelPhotoHint": "新增一張標籤特寫作為額外照片，AI 就能讀取品牌與尺寸。",
+    "replaceAnalysis": {
+      "confirm": "重新分析並取代",
+      "description": "AI 會重新查看照片並取代先前的判斷。你自己編輯過的標籤會保留。此功能推出之前所做的修改沒有被記錄，因此也可能被取代。",
+      "title": "重新分析並取代 AI 標籤？"
+    }
   },
   "lightbox": {
     "openInWardrobe": "在衣櫥中開啟"
@@ -281,7 +283,7 @@
   },
   "splitPhoto": {
     "addBox": "新增框",
-    "archiveNote": "原照片會被封存而不是刪除，你可以從封存中還原。",
+    "archiveNote": "原照片會被保留，但不再顯示在你的衣櫥中。它不會被刪除。",
     "boxLabel": "衣物 {number}",
     "create": "{count, plural, =0 {建立單品} other {建立 # 件單品}}",
     "createFailed": "無法拆分照片",
@@ -289,6 +291,14 @@
     "description": "找出這張照片中的每件衣物，並為每件建立獨立的單品。",
     "detectFailed": "AI 無法檢視這張照片。",
     "detecting": "正在尋找衣物…",
+    "errors": {
+      "aiUnreachable": "無法連線到 AI 服務。請重試，或為每件衣物新增一個框。",
+      "imageNotFound": "找不到這件單品的照片。",
+      "rateLimited": "短時間內嘗試次數過多。請稍候一分鐘再試。",
+      "sourceArchived": "這件單品已封存，無法再次拆分它的照片。",
+      "sourceBusy": "這張照片仍在旋轉或移除背景中。完成後再試。",
+      "visionDisabled": "自動辨識衣物已關閉。請為每件衣物新增一個框。"
+    },
     "hint": "拖動框可移動，拖動角可調整大小。",
     "noneFound": "找不到衣物。新增一個框並拖到衣物上。",
     "photoAlt": "要拆分的照片",

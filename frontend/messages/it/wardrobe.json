@@ -97,9 +97,6 @@
     "deleteError": "Eliminazione capi fallita",
     "deletePartialFailed": "{count, plural, one {Impossibile eliminare # capo} other {Impossibile eliminare # capi}}",
     "deleteSuccess": "{count, plural, one {# capo eliminato} other {# capi eliminati}}",
-    "reanalyzeAndReplaceConfirmAction": "Rianalizza e sostituisci",
-    "reanalyzeAndReplaceConfirmDescription": "L'IA guarda di nuovo ogni foto e sostituisce le sue stime precedenti. I tag che hai modificato tu vengono mantenuti. Le modifiche fatte prima di questa funzione non sono state registrate, quindi possono essere sostituite. Viene usata una richiesta IA per capo, e può richiedere un po' di tempo.",
-    "reanalyzeAndReplaceConfirmTitle": "Rianalizzare e sostituire i tag IA di {count, plural, one {# capo} other {# capi}}?",
     "reanalyzeCooldown": "{count, plural, one {# item cooling down after a recent failure} other {# items cooling down after a recent failure}}",
     "reanalyzeError": "Impossibile mettere in coda i capi per la rianalisi",
     "reanalyzeMany": "{count} capi messi in coda per la rianalisi. Potrebbe volerci un po’.",
@@ -116,7 +113,10 @@
     "rotateError": "Failed to rotate items",
     "rotatePartialFailed": "{count, plural, one {Failed to rotate # item} other {Failed to rotate # items}}",
     "rotateQueued": "{count, plural, one {Queued # item for rotation} other {Queued # items for rotation}}",
-    "rotateSkipped": "{count, plural, one {# item skipped (already processing)} other {# items skipped (already processing)}}"
+    "rotateSkipped": "{count, plural, one {# item skipped (already processing)} other {# items skipped (already processing)}}",
+    "reanalyzeAndReplaceConfirmAction": "Rianalizza e sostituisci",
+    "reanalyzeAndReplaceConfirmDescription": "L'IA guarda di nuovo ogni foto e sostituisce le sue stime precedenti. I tag che hai modificato tu vengono mantenuti. Le modifiche fatte prima di questa funzione non sono state registrate, quindi possono essere sostituite. Viene usata una richiesta IA per capo, e può richiedere un po' di tempo.",
+    "reanalyzeAndReplaceConfirmTitle": "Rianalizzare e sostituire i tag IA di {count, plural, one {# capo} other {# capi}}?"
   },
   "bulkDelete": {
     "confirmDescription": "Questo eliminerà definitivamente i capi selezionati e le relative immagini. Questa azione non può essere annullata.",
@@ -153,7 +153,6 @@
   "itemCount": "{count, plural, one {# capo nel tuo guardaroba} other {# capi nel tuo guardaroba}}",
   "itemDetail": {
     "actions": {
-      "backgroundRemovalStarted": "Rimozione dello sfondo in corso…",
       "backgroundRemoveError": "Rimozione sfondo fallita",
       "backgroundRemoved": "Sfondo rimosso",
       "cancelEditing": "Annulla modifica",
@@ -173,14 +172,15 @@
       "markWashed": "Segna come lavato",
       "originalRestoreError": "Ripristino dell’immagine originale fallito",
       "originalRestored": "Immagine originale ripristinata",
+      "saveError": "Salvataggio capo fallito",
       "washError": "Impossibile segnare come lavato",
       "logWear": "Registra utilizzo",
       "wearLogged": "Utilizzo registrato",
       "wearLogError": "Impossibile registrare l'utilizzo",
-      "washed": "Capo segnato come lavato"
+      "washed": "Capo segnato come lavato",
+      "backgroundRemovalStarted": "Rimozione dello sfondo in corso…"
     },
     "brand": "Marca",
-    "labelPhotoHint": "Aggiungi un primo piano dell'etichetta come foto extra, così l'IA può leggere marca e taglia.",
     "name": "Nome",
     "notes": "Note",
     "placeholders": {
@@ -188,36 +188,31 @@
       "brandName": "Nome marca",
       "itemName": "Nome capo",
       "selectColor": "Seleziona colore",
-      "subtype": "es. leggings, chelsea",
+      "subtype": "es. chino, chelsea",
       "washIntervalDefault": "Predefinito: {count}"
     },
     "primaryColor": "Colore principale",
-    "replaceAnalysis": {
-      "confirm": "Rianalizza e sostituisci",
-      "description": "L'IA guarda di nuovo la foto e sostituisce le sue stime precedenti. I tag che hai modificato tu vengono mantenuti. Le modifiche fatte prima di questa funzione non sono state registrate, quindi possono essere sostituite.",
-      "title": "Rianalizzare e sostituire i tag IA?"
-    },
     "subtype": "Sottotipo",
     "tagsEditor": {
       "fit": "Vestibilità",
       "formality": "Formalità",
       "hint": "Correggi ciò che l'IA ha sbagliato. Le tue modifiche vengono mantenute se il capo viene analizzato di nuovo.",
+      "invalidValue": "Un tag ha un valore che non è nell'elenco. Selezionalo di nuovo e salva.",
       "material": "Materiale",
       "none": "Nessuno",
       "pattern": "Motivo",
       "season": "Stagione",
       "secondaryColor": "Colore secondario",
-      "size": "Taglia",
-      "sizePlaceholder": "es. M, 42, W32 L30",
       "style": "Stile",
       "tertiaryColor": "Colore terziario",
-      "title": "Tag IA"
+      "title": "Tag IA",
+      "size": "Taglia",
+      "sizePlaceholder": "es. M, 42, W32 L30"
     },
     "titles": {
       "analysisInProgress": "Analisi in corso...",
       "deleteImage": "Elimina immagine",
       "findMatchingOutfits": "Trova outfit abbinati",
-      "reanalyzeAndReplace": "Rianalizza e sostituisci i tag IA",
       "reanalyzeWithAI": "Rianalizza con IA",
       "removeBackground": "Rimuovi sfondo",
       "replaceImage": "Sostituisci immagine",
@@ -227,7 +222,8 @@
       "splitPhoto": "Dividi la foto",
       "suggestOutfit": "Crea outfit con questo capo",
       "toggleFavorite": "Aggiungi/rimuovi dai preferiti",
-      "undoBackgroundRemoval": "Annulla rimozione sfondo"
+      "undoBackgroundRemoval": "Annulla rimozione sfondo",
+      "reanalyzeAndReplace": "Rianalizza e sostituisci i tag IA"
     },
     "type": "Tipo",
     "unrecognizedType": "L’IA ha rilevato “{value}”, che non è un tipo supportato. Scegli il tipo più vicino qui sotto; puoi mantenere “{value}” come sottotipo.",
@@ -248,7 +244,6 @@
       "needsWashing": "Da lavare",
       "never": "Mai",
       "primaryImage": "Principale",
-      "sizeBadge": "Taglia {size}",
       "timeline": "{count, plural, one {Cronologia (# evento)} other {Cronologia (# eventi)}}",
       "today": "Oggi",
       "totalWears": "Totale utilizzi",
@@ -259,9 +254,16 @@
       "wearHistory": "Cronologia utilizzi",
       "wears": "utilizzi",
       "wearsSinceWash": "Utilizzi dal lavaggio: {current}/{max}",
-      "wornCount": "{count, plural, one {Indossato # volta} other {Indossato # volte}}"
+      "wornCount": "{count, plural, one {Indossato # volta} other {Indossato # volte}}",
+      "sizeBadge": "Taglia {size}"
     },
-    "washInterval": "Intervallo lavaggio"
+    "washInterval": "Intervallo lavaggio",
+    "labelPhotoHint": "Aggiungi un primo piano dell'etichetta come foto extra, così l'IA può leggere marca e taglia.",
+    "replaceAnalysis": {
+      "confirm": "Rianalizza e sostituisci",
+      "description": "L'IA guarda di nuovo la foto e sostituisce le sue stime precedenti. I tag che hai modificato tu vengono mantenuti. Le modifiche fatte prima di questa funzione non sono state registrate, quindi possono essere sostituite.",
+      "title": "Rianalizzare e sostituire i tag IA?"
+    }
   },
   "lightbox": {
     "openInWardrobe": "Apri nel guardaroba"
@@ -281,7 +283,7 @@
   },
   "splitPhoto": {
     "addBox": "Aggiungi un riquadro",
-    "archiveNote": "La foto originale viene archiviata, non eliminata. Puoi ripristinarla dall'archivio.",
+    "archiveNote": "La foto originale viene conservata ma nascosta dal tuo guardaroba. Non viene eliminata.",
     "boxLabel": "Capo {number}",
     "create": "{count, plural, =0 {Crea articoli} one {Crea # articolo} other {Crea # articoli}}",
     "createFailed": "Impossibile dividere la foto",
@@ -289,6 +291,14 @@
     "description": "Trova ogni capo in questa foto e crea un articolo separato per ciascuno.",
     "detectFailed": "L'IA non è riuscita a guardare questa foto.",
     "detecting": "Ricerca dei capi…",
+    "errors": {
+      "aiUnreachable": "Impossibile raggiungere il servizio di IA. Riprova, oppure aggiungi un riquadro per ogni capo.",
+      "imageNotFound": "La foto di questo articolo non è stata trovata.",
+      "rateLimited": "Troppi tentativi in poco tempo. Attendi un minuto, poi riprova.",
+      "sourceArchived": "Questo articolo è già archiviato, quindi la sua foto non può essere divisa di nuovo.",
+      "sourceBusy": "Questa foto è ancora in fase di rotazione o di rimozione dello sfondo. Riprova al termine dell'operazione.",
+      "visionDisabled": "Il rilevamento automatico dei capi è disattivato. Aggiungi un riquadro per ogni capo."
+    },
     "hint": "Trascina un riquadro per spostarlo, o un angolo per ridimensionarlo.",
     "noneFound": "Nessun capo trovato. Aggiungi un riquadro e trascinalo su un capo.",
     "photoAlt": "La foto da dividere",

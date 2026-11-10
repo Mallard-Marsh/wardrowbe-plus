@@ -97,9 +97,6 @@
     "deleteError": "Stücke konnten nicht gelöscht werden",
     "deletePartialFailed": "{count, plural, one {# Stück konnte nicht gelöscht werden} other {# Stücke konnten nicht gelöscht werden}}",
     "deleteSuccess": "{count, plural, one {# Stück gelöscht} other {# Stücke gelöscht}}",
-    "reanalyzeAndReplaceConfirmAction": "Neu analysieren und ersetzen",
-    "reanalyzeAndReplaceConfirmDescription": "Die KI betrachtet jedes Foto erneut und ersetzt ihre früheren Einschätzungen. Tags, die du selbst bearbeitet hast, bleiben erhalten. Änderungen von vor dieser Funktion wurden nicht erfasst und können deshalb ebenfalls ersetzt werden. Pro Teil wird eine KI-Anfrage gestellt; das kann etwas dauern.",
-    "reanalyzeAndReplaceConfirmTitle": "KI-Tags für {count, plural, one {# Teil} other {# Teile}} neu analysieren und ersetzen?",
     "reanalyzeCooldown": "{count, plural, one {# item cooling down after a recent failure} other {# items cooling down after a recent failure}}",
     "reanalyzeError": "Stücke konnten nicht zur erneuten Analyse eingereiht werden",
     "reanalyzeMany": "{count} Stücke zur erneuten Analyse eingereiht. Das kann etwas dauern.",
@@ -116,7 +113,10 @@
     "rotateError": "Failed to rotate items",
     "rotatePartialFailed": "{count, plural, one {Failed to rotate # item} other {Failed to rotate # items}}",
     "rotateQueued": "{count, plural, one {Queued # item for rotation} other {Queued # items for rotation}}",
-    "rotateSkipped": "{count, plural, one {# item skipped (already processing)} other {# items skipped (already processing)}}"
+    "rotateSkipped": "{count, plural, one {# item skipped (already processing)} other {# items skipped (already processing)}}",
+    "reanalyzeAndReplaceConfirmAction": "Neu analysieren und ersetzen",
+    "reanalyzeAndReplaceConfirmDescription": "Die KI betrachtet jedes Foto erneut und ersetzt ihre früheren Einschätzungen. Tags, die du selbst bearbeitet hast, bleiben erhalten. Änderungen von vor dieser Funktion wurden nicht erfasst und können deshalb ebenfalls ersetzt werden. Pro Teil wird eine KI-Anfrage gestellt; das kann etwas dauern.",
+    "reanalyzeAndReplaceConfirmTitle": "KI-Tags für {count, plural, one {# Teil} other {# Teile}} neu analysieren und ersetzen?"
   },
   "bulkDelete": {
     "confirmDescription": "Die ausgewählten Stücke und ihre Bilder werden endgültig gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
@@ -153,7 +153,6 @@
   "itemCount": "{count, plural, one {# Stück in deinem Kleiderschrank} other {# Stücke in deinem Kleiderschrank}}",
   "itemDetail": {
     "actions": {
-      "backgroundRemovalStarted": "Hintergrund wird entfernt…",
       "backgroundRemoveError": "Hintergrund konnte nicht entfernt werden",
       "backgroundRemoved": "Hintergrund entfernt",
       "cancelEditing": "Bearbeitung abbrechen",
@@ -173,14 +172,15 @@
       "markWashed": "Als gewaschen markieren",
       "originalRestoreError": "Originalbild konnte nicht wiederhergestellt werden",
       "originalRestored": "Originalbild wiederhergestellt",
+      "saveError": "Stück konnte nicht gespeichert werden",
       "washError": "Konnte nicht als gewaschen markiert werden",
       "logWear": "Tragen erfassen",
       "wearLogged": "Tragen erfasst",
       "wearLogError": "Tragen konnte nicht erfasst werden",
-      "washed": "Stück als gewaschen markiert"
+      "washed": "Stück als gewaschen markiert",
+      "backgroundRemovalStarted": "Hintergrund wird entfernt…"
     },
     "brand": "Marke",
-    "labelPhotoHint": "Füge ein Nahaufnahme-Foto des Etiketts als zusätzliches Foto hinzu, damit die KI Marke und Größe lesen kann.",
     "name": "Name",
     "notes": "Notizen",
     "placeholders": {
@@ -188,36 +188,31 @@
       "brandName": "Markenname",
       "itemName": "Name des Stücks",
       "selectColor": "Farbe auswählen",
-      "subtype": "z. B. Leggings, Chelsea",
+      "subtype": "z. B. Chinos, Chelsea",
       "washIntervalDefault": "Standard: {count}"
     },
     "primaryColor": "Hauptfarbe",
-    "replaceAnalysis": {
-      "confirm": "Neu analysieren und ersetzen",
-      "description": "Die KI betrachtet das Foto erneut und ersetzt ihre früheren Einschätzungen. Tags, die du selbst bearbeitet hast, bleiben erhalten. Änderungen von vor dieser Funktion wurden nicht erfasst und können deshalb ebenfalls ersetzt werden.",
-      "title": "KI-Tags neu analysieren und ersetzen?"
-    },
     "subtype": "Untertyp",
     "tagsEditor": {
       "fit": "Passform",
       "formality": "Formalität",
       "hint": "Korrigiere, was die KI falsch erkannt hat. Deine Änderungen bleiben erhalten, wenn das Teil erneut analysiert wird.",
+      "invalidValue": "Ein Tag hat einen Wert, der nicht in der Liste steht. Wähle ihn erneut aus und speichere.",
       "material": "Material",
       "none": "Keine",
       "pattern": "Muster",
       "season": "Saison",
       "secondaryColor": "Zweitfarbe",
-      "size": "Größe",
-      "sizePlaceholder": "z. B. M, 42, W32 L30",
       "style": "Stil",
       "tertiaryColor": "Drittfarbe",
-      "title": "KI-Tags"
+      "title": "KI-Tags",
+      "size": "Größe",
+      "sizePlaceholder": "z. B. M, 42, W32 L30"
     },
     "titles": {
       "analysisInProgress": "Analyse läuft...",
       "deleteImage": "Bild löschen",
       "findMatchingOutfits": "Passende Outfits finden",
-      "reanalyzeAndReplace": "KI-Tags neu analysieren und ersetzen",
       "reanalyzeWithAI": "Erneut mit KI analysieren",
       "removeBackground": "Hintergrund entfernen",
       "replaceImage": "Bild ersetzen",
@@ -227,7 +222,8 @@
       "splitPhoto": "Foto aufteilen",
       "suggestOutfit": "Outfit mit diesem Teil erstellen",
       "toggleFavorite": "Favorit umschalten",
-      "undoBackgroundRemoval": "Hintergrundentfernung rückgängig machen"
+      "undoBackgroundRemoval": "Hintergrundentfernung rückgängig machen",
+      "reanalyzeAndReplace": "KI-Tags neu analysieren und ersetzen"
     },
     "type": "Typ",
     "unrecognizedType": "Die KI hat „{value}“ erkannt, das ist kein unterstützter Typ. Wähle unten den passendsten Typ; „{value}“ kannst du als Untertyp behalten.",
@@ -248,7 +244,6 @@
       "needsWashing": "Muss gewaschen werden",
       "never": "Nie",
       "primaryImage": "Primär",
-      "sizeBadge": "Größe {size}",
       "timeline": "{count, plural, one {Verlauf (# Ereignis)} other {Verlauf (# Ereignisse)}}",
       "today": "Heute",
       "totalWears": "Insgesamt getragen",
@@ -259,9 +254,16 @@
       "wearHistory": "Trageverlauf",
       "wears": "Tragezyklen",
       "wearsSinceWash": "Getragen seit Wäsche: {current}/{max}",
-      "wornCount": "{count, plural, one {# Mal getragen} other {# Mal getragen}}"
+      "wornCount": "{count, plural, one {# Mal getragen} other {# Mal getragen}}",
+      "sizeBadge": "Größe {size}"
     },
-    "washInterval": "Waschintervall"
+    "washInterval": "Waschintervall",
+    "labelPhotoHint": "Füge ein Nahaufnahme-Foto des Etiketts als zusätzliches Foto hinzu, damit die KI Marke und Größe lesen kann.",
+    "replaceAnalysis": {
+      "confirm": "Neu analysieren und ersetzen",
+      "description": "Die KI betrachtet das Foto erneut und ersetzt ihre früheren Einschätzungen. Tags, die du selbst bearbeitet hast, bleiben erhalten. Änderungen von vor dieser Funktion wurden nicht erfasst und können deshalb ebenfalls ersetzt werden.",
+      "title": "KI-Tags neu analysieren und ersetzen?"
+    }
   },
   "lightbox": {
     "openInWardrobe": "Im Kleiderschrank öffnen"
@@ -281,7 +283,7 @@
   },
   "splitPhoto": {
     "addBox": "Rahmen hinzufügen",
-    "archiveNote": "Das Originalfoto wird archiviert, nicht gelöscht. Du kannst es aus deinem Archiv wiederherstellen.",
+    "archiveNote": "Das Originalfoto bleibt erhalten, wird aber in deinem Kleiderschrank ausgeblendet. Es wird nicht gelöscht.",
     "boxLabel": "Kleidungsstück {number}",
     "create": "{count, plural, =0 {Artikel erstellen} one {# Artikel erstellen} other {# Artikel erstellen}}",
     "createFailed": "Das Foto konnte nicht aufgeteilt werden",
@@ -289,6 +291,14 @@
     "description": "Findet jedes Kleidungsstück auf diesem Foto und legt daraus je einen eigenen Artikel an.",
     "detectFailed": "Die KI konnte dieses Foto nicht ansehen.",
     "detecting": "Kleidungsstücke werden gesucht…",
+    "errors": {
+      "aiUnreachable": "Der KI-Dienst ist nicht erreichbar. Versuche es erneut oder füge für jedes Kleidungsstück einen Rahmen hinzu.",
+      "imageNotFound": "Das Foto dieses Artikels wurde nicht gefunden.",
+      "rateLimited": "Zu viele Versuche in kurzer Zeit. Warte eine Minute und versuche es dann erneut.",
+      "sourceArchived": "Dieser Artikel ist bereits archiviert, daher kann sein Foto nicht erneut aufgeteilt werden.",
+      "sourceBusy": "Dieses Foto wird noch gedreht oder sein Hintergrund wird entfernt. Versuche es erneut, sobald das fertig ist.",
+      "visionDisabled": "Die automatische Erkennung von Kleidungsstücken ist ausgeschaltet. Füge für jedes Kleidungsstück einen Rahmen hinzu."
+    },
     "hint": "Ziehe einen Rahmen, um ihn zu verschieben, oder eine Ecke, um die Größe zu ändern.",
     "noneFound": "Es wurden keine Kleidungsstücke gefunden. Füge einen Rahmen hinzu und ziehe ihn über ein Kleidungsstück.",
     "photoAlt": "Das Foto zum Aufteilen",

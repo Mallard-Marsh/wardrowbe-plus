@@ -6,13 +6,15 @@ from uuid import UUID
 from arq import create_pool
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import select
 
 from app.config import get_settings
 from app.database import DbSession
-from app.models.item import ClothingItem
+from app.models.item import ClothingItem, ItemStatus
+from app.models.preference import UserPreference
 from app.models.user import User
 from app.schemas.item import ItemCreate
-from app.services.ai_service import AIDisabledError, get_ai_service
+from app.services.ai_service import AIDisabledError, AIService, require_internal_ai
 from app.services.image_service import ImageService
 from app.services.item_service import ItemService
 from app.utils.auth import get_current_user
@@ -71,6 +73,13 @@ async def _owned_item(item_service: ItemService, item_id: UUID, user: User) -> C
     return item
 
 
+def _image_not_found() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail={"message": "Image not found", "error_code": "IMAGE_NOT_FOUND"},
+    )
+
+
 @router.post("/{item_id}/detect-garments", response_model=DetectGarmentsResponse)
 async def detect_garments(
     item_id: UUID,
@@ -79,22 +88,34 @@ async def detect_garments(
 ) -> DetectGarmentsResponse:
     """Find the garments in an item's photo and where they are. Writes nothing."""
     item = await _owned_item(ItemService(db), item_id, current_user)
+    try:
+        require_internal_ai("vision")
+    except AIDisabledError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"message": "AI vision is disabled", "error_code": "AI_VISION_DISABLED"},
+        ) from e
     await rate_limit_by_user(current_user.id, "detect-garments", max_requests=10, window_seconds=60)
 
     image_path = ImageService().get_image_path(item.image_path)
     if not image_path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+        raise _image_not_found()
 
+    ai_endpoints = (
+        await db.execute(
+            select(UserPreference.ai_endpoints).where(UserPreference.user_id == current_user.id)
+        )
+    ).scalar_one_or_none()
     try:
-        garments = await get_ai_service().detect_garments(image_path)
-    except AIDisabledError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="AI vision is disabled"
-        ) from e
+        garments = await AIService(endpoints=ai_endpoints).detect_garments(image_path)
     except Exception as e:
         logger.error(f"Garment detection failed for item {item_id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY, detail="The AI service could not be reached"
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "message": "The AI service could not be reached",
+                "error_code": "AI_UNREACHABLE",
+            },
         ) from e
 
     return DetectGarmentsResponse(
@@ -122,15 +143,45 @@ async def split_item(
     """Make one new item from each box on an item's photo, then archive the original.
 
     All or nothing: if any crop fails, the crops already stored are removed and nothing changes.
-    The original is archived (restorable), never deleted. Crops skip the duplicate check, since
+    The original is archived and hidden, never deleted. Crops skip the duplicate check, since
     garments that look alike (a white tee and a cream one) are the point.
     """
-    item_service = ItemService(db)
-    source = await _owned_item(item_service, item_id, current_user)
-    if source.is_archived:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Item is archived")
+    # Held until the split commits, so a second split of the same photo waits here and then
+    # sees it archived, and a rotate or background-removal job cannot rewrite it mid-crop.
+    locked = (
+        await db.execute(
+            select(
+                ClothingItem.is_archived,
+                ClothingItem.status,
+                ClothingItem.processing_kind,
+                ClothingItem.image_path,
+            )
+            .where(ClothingItem.id == item_id, ClothingItem.user_id == current_user.id)
+            .with_for_update()
+        )
+    ).one_or_none()
+    if locked is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+    if locked.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"message": "Item is archived", "error_code": "SOURCE_ARCHIVED"},
+        )
+    if locked.status == ItemStatus.processing and locked.processing_kind is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "The photo is still being edited",
+                "error_code": "SOURCE_BUSY",
+            },
+        )
 
     image_service = ImageService()
+    if not image_service.get_image_path(locked.image_path).exists():
+        raise _image_not_found()
+
+    item_service = ItemService(db)
+    source = await _owned_item(item_service, item_id, current_user)
     stored: list[dict[str, str]] = []
     created: list[ClothingItem] = []
     try:
@@ -138,7 +189,7 @@ async def split_item(
             try:
                 crop = await asyncio.to_thread(
                     image_service.crop_to_jpeg,
-                    source.image_path,
+                    locked.image_path,
                     box.left,
                     box.top,
                     box.width,
@@ -189,15 +240,16 @@ async def _start_tagging(
         return
     try:
         for item in items:
-            job = await redis.enqueue_job(
-                "tag_item_image",
-                str(item.id),
-                str(image_service.get_image_path(item.image_path)),
-                _queue_name=TAGGING_QUEUE,
-            )
-            item.ai_job_id = job.job_id
-        await db.commit()
-    except Exception as e:
-        logger.error(f"Failed to queue tagging for split items: {e}")
+            try:
+                job = await redis.enqueue_job(
+                    "tag_item_image",
+                    str(item.id),
+                    str(image_service.get_image_path(item.image_path)),
+                    _queue_name=TAGGING_QUEUE,
+                )
+                item.ai_job_id = job.job_id
+                await db.commit()
+            except Exception as e:
+                logger.error(f"Failed to queue tagging for split item {item.id}: {e}")
     finally:
         await redis.aclose()

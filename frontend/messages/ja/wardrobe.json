@@ -97,9 +97,6 @@
     "deleteError": "アイテムの削除に失敗しました",
     "deletePartialFailed": "{count, plural, one {# 件のアイテムの削除に失敗しました} other {# 件のアイテムの削除に失敗しました}}",
     "deleteSuccess": "{count, plural, one {# 件のアイテムを削除しました} other {# 件のアイテムを削除しました}}",
-    "reanalyzeAndReplaceConfirmAction": "再分析して置き換える",
-    "reanalyzeAndReplaceConfirmDescription": "AIが各写真をもう一度分析し、以前の推測を置き換えます。自分で編集したタグは保持されます。この機能の追加前に行った編集は記録されていないため、置き換えられる場合があります。アイテムごとにAIへのリクエストを1回使用するため、時間がかかることがあります。",
-    "reanalyzeAndReplaceConfirmTitle": "{count, plural, other {#件}}のAIタグを再分析して置き換えますか？",
     "reanalyzeCooldown": "{count, plural, one {# item cooling down after a recent failure} other {# items cooling down after a recent failure}}",
     "reanalyzeError": "再分析キューイングに失敗しました",
     "reanalyzeMany": "{count} 件を再分析キューに追加しました。少し時間がかかる場合があります。",
@@ -116,7 +113,10 @@
     "rotateError": "Failed to rotate items",
     "rotatePartialFailed": "{count, plural, one {Failed to rotate # item} other {Failed to rotate # items}}",
     "rotateQueued": "{count, plural, one {Queued # item for rotation} other {Queued # items for rotation}}",
-    "rotateSkipped": "{count, plural, one {# item skipped (already processing)} other {# items skipped (already processing)}}"
+    "rotateSkipped": "{count, plural, one {# item skipped (already processing)} other {# items skipped (already processing)}}",
+    "reanalyzeAndReplaceConfirmAction": "再分析して置き換える",
+    "reanalyzeAndReplaceConfirmDescription": "AIが各写真をもう一度分析し、以前の推測を置き換えます。自分で編集したタグは保持されます。この機能の追加前に行った編集は記録されていないため、置き換えられる場合があります。アイテムごとにAIへのリクエストを1回使用するため、時間がかかることがあります。",
+    "reanalyzeAndReplaceConfirmTitle": "{count, plural, other {#件}}のAIタグを再分析して置き換えますか？"
   },
   "bulkDelete": {
     "confirmDescription": "選択したアイテムと画像を完全に削除します。この操作は取り消せません。",
@@ -153,7 +153,6 @@
   "itemCount": "{count, plural, one {ワードローブに# 件のアイテム} other {ワードローブに# 件のアイテム}}",
   "itemDetail": {
     "actions": {
-      "backgroundRemovalStarted": "背景を削除しています…",
       "backgroundRemoveError": "背景の削除に失敗しました",
       "backgroundRemoved": "背景を削除しました",
       "cancelEditing": "編集をキャンセル",
@@ -173,14 +172,15 @@
       "markWashed": "洗濯済みにする",
       "originalRestoreError": "元の画像の復元に失敗しました",
       "originalRestored": "元の画像を復元しました",
+      "saveError": "アイテムの保存に失敗しました",
       "washError": "洗濯済みマークに失敗しました",
       "logWear": "着用を記録",
       "wearLogged": "着用を記録しました",
       "wearLogError": "着用の記録に失敗しました",
-      "washed": "洗濯済みにしました"
+      "washed": "洗濯済みにしました",
+      "backgroundRemovalStarted": "背景を削除しています…"
     },
     "brand": "ブランド",
-    "labelPhotoHint": "タグのアップ写真を追加すると、AIがブランドとサイズを読み取れます。",
     "name": "名前",
     "notes": "メモ",
     "placeholders": {
@@ -188,36 +188,31 @@
       "brandName": "ブランド名",
       "itemName": "アイテム名",
       "selectColor": "色を選択",
-      "subtype": "例：レギンス、チェルシー",
+      "subtype": "例：チノパン、チェルシー",
       "washIntervalDefault": "デフォルト：{count}"
     },
     "primaryColor": "メインカラー",
-    "replaceAnalysis": {
-      "confirm": "再分析して置き換える",
-      "description": "AIが写真をもう一度分析し、以前の推測を置き換えます。自分で編集したタグは保持されます。この機能の追加前に行った編集は記録されていないため、置き換えられる場合があります。",
-      "title": "AIタグを再分析して置き換えますか？"
-    },
     "subtype": "サブタイプ",
     "tagsEditor": {
       "fit": "フィット",
       "formality": "フォーマル度",
       "hint": "AIの間違いを修正できます。アイテムを再分析しても、あなたの変更は保持されます。",
+      "invalidValue": "リストにない値のタグがあります。選び直してから保存してください。",
       "material": "素材",
       "none": "なし",
       "pattern": "柄",
       "season": "季節",
       "secondaryColor": "サブカラー",
-      "size": "サイズ",
-      "sizePlaceholder": "例: M、42、W32 L30",
       "style": "スタイル",
       "tertiaryColor": "3番目の色",
-      "title": "AIタグ"
+      "title": "AIタグ",
+      "size": "サイズ",
+      "sizePlaceholder": "例: M、42、W32 L30"
     },
     "titles": {
       "analysisInProgress": "分析中...",
       "deleteImage": "画像を削除",
       "findMatchingOutfits": "マッチするコーデを探す",
-      "reanalyzeAndReplace": "AIタグを再分析して置き換える",
       "reanalyzeWithAI": "AIで再分析",
       "removeBackground": "背景を削除",
       "replaceImage": "画像を置き換え",
@@ -227,7 +222,8 @@
       "splitPhoto": "写真を分割",
       "suggestOutfit": "このアイテムでコーデを作成",
       "toggleFavorite": "お気に入りを切り替え",
-      "undoBackgroundRemoval": "背景削除を元に戻す"
+      "undoBackgroundRemoval": "背景削除を元に戻す",
+      "reanalyzeAndReplace": "AIタグを再分析して置き換える"
     },
     "type": "タイプ",
     "unrecognizedType": "AIは「{value}」と判定しましたが、対応していない種類です。下から最も近い種類を選んでください。「{value}」はサブタイプとして残せます。",
@@ -248,7 +244,6 @@
       "needsWashing": "洗濯が必要",
       "never": "なし",
       "primaryImage": "メイン",
-      "sizeBadge": "サイズ {size}",
       "timeline": "{count, plural, one {タイムライン（# 件）} other {タイムライン（# 件）}}",
       "today": "今日",
       "totalWears": "総着用回数",
@@ -259,9 +254,16 @@
       "wearHistory": "着用履歴",
       "wears": "着用回数",
       "wearsSinceWash": "洗濯後の着用：{current}/{max}",
-      "wornCount": "{count, plural, one {# 回着用} other {# 回着用}}"
+      "wornCount": "{count, plural, one {# 回着用} other {# 回着用}}",
+      "sizeBadge": "サイズ {size}"
     },
-    "washInterval": "洗濯間隔"
+    "washInterval": "洗濯間隔",
+    "labelPhotoHint": "タグのアップ写真を追加すると、AIがブランドとサイズを読み取れます。",
+    "replaceAnalysis": {
+      "confirm": "再分析して置き換える",
+      "description": "AIが写真をもう一度分析し、以前の推測を置き換えます。自分で編集したタグは保持されます。この機能の追加前に行った編集は記録されていないため、置き換えられる場合があります。",
+      "title": "AIタグを再分析して置き換えますか？"
+    }
   },
   "lightbox": {
     "openInWardrobe": "ワードローブで開く"
@@ -281,7 +283,7 @@
   },
   "splitPhoto": {
     "addBox": "枠を追加",
-    "archiveNote": "元の写真は削除されず、アーカイブされます。アーカイブから復元できます。",
+    "archiveNote": "元の写真は保持されますが、ワードローブには表示されなくなります。削除はされません。",
     "boxLabel": "アイテム {number}",
     "create": "{count, plural, =0 {アイテムを作成} other {#件のアイテムを作成}}",
     "createFailed": "写真を分割できませんでした",
@@ -289,6 +291,14 @@
     "description": "この写真から各アイテムを見つけ、それぞれ別のアイテムとして登録します。",
     "detectFailed": "AIがこの写真を確認できませんでした。",
     "detecting": "アイテムを探しています…",
+    "errors": {
+      "aiUnreachable": "AIサービスに接続できませんでした。再試行するか、アイテムごとに枠を追加してください。",
+      "imageNotFound": "このアイテムの写真が見つかりませんでした。",
+      "rateLimited": "短時間に試行回数が多すぎます。1分ほど待ってから再試行してください。",
+      "sourceArchived": "このアイテムはすでにアーカイブされているため、写真を再度分割できません。",
+      "sourceBusy": "この写真はまだ回転中または背景の削除中です。完了してから再試行してください。",
+      "visionDisabled": "アイテムの自動検出はオフになっています。アイテムごとに枠を追加してください。"
+    },
     "hint": "枠をドラッグして移動、角をドラッグしてサイズを変更できます。",
     "noneFound": "アイテムが見つかりませんでした。枠を追加して、アイテムの上にドラッグしてください。",
     "photoAlt": "分割する写真",
