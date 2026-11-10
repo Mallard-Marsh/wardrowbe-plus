@@ -2,13 +2,11 @@
 
 import pytest
 from httpx import AsyncClient
-from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.item import ClothingItem, ItemStatus
-from app.schemas.item import ItemUpdate
-from app.utils.garment_vocabulary import FITS, PATTERNS, SEASONS, STYLES
+from app.utils.garment_vocabulary import FITS, FORMALITY, MATERIALS, PATTERNS, SEASONS, STYLES
 from app.utils.tag_validation import normalize_tag_edits
 
 # --------------------------------------------------------------------------
@@ -66,14 +64,22 @@ class TestNormalizeTagEdits:
     def test_keys_not_sent_are_not_checked_or_added(self):
         assert normalize_tag_edits({"pattern": "solid"}) == {"pattern": "solid"}
 
-    def test_colours_material_and_free_text_keys_are_left_alone(self):
-        edits = {
-            "colors": ["Sea Foam"],
-            "primary_color": "Sea Foam",
-            "material": "100% Linen",
-            "size": "M",
-        }
+    def test_colours_and_free_text_keys_are_left_alone(self):
+        edits = {"colors": ["Sea Foam"], "primary_color": "Sea Foam", "size": "M"}
         assert normalize_tag_edits(edits) == edits
+
+    def test_material_is_a_closed_list(self):
+        assert normalize_tag_edits({"material": " Linen "}) == {"material": "linen"}
+        with pytest.raises(ValueError, match="material '100% Linen'"):
+            normalize_tag_edits({"material": "100% Linen"})
+
+    def test_an_off_list_value_the_item_has_is_kept_exactly_as_stored(self):
+        cleaned = normalize_tag_edits({"material": "100% linen "}, {"material": "100% Linen"})
+        assert cleaned == {"material": "100% Linen"}
+
+    def test_none_is_not_a_pattern_on_an_item_without_one(self):
+        with pytest.raises(ValueError, match="pattern 'none'"):
+            normalize_tag_edits({"pattern": "none"}, {})
 
     def test_rejects_every_unknown_value(self):
         with pytest.raises(ValueError) as error:
@@ -88,27 +94,21 @@ class TestNormalizeTagEdits:
         normalize_tag_edits(edits)
         assert edits == {"pattern": " Striped "}
 
-
-class TestItemUpdateSchema:
-    def test_cleans_only_the_tags_that_were_sent(self):
-        update = ItemUpdate(tags={"pattern": " Striped "})
-        assert update.tags.pattern == "striped"
-        assert update.model_dump(exclude_unset=True)["tags"] == {"pattern": "striped"}
-
-    def test_rejects_an_unknown_pattern(self):
-        with pytest.raises(ValidationError, match="pattern 'swirly'"):
-            ItemUpdate(tags={"pattern": "swirly"})
-
-    def test_a_missing_tags_object_is_fine(self):
-        assert ItemUpdate(name="x").tags is None
-
     @pytest.mark.parametrize(
         ("key", "values"),
-        [("pattern", PATTERNS), ("fit", FITS), ("style", STYLES), ("season", SEASONS)],
+        [
+            ("pattern", PATTERNS),
+            ("material", MATERIALS),
+            ("formality", FORMALITY),
+            ("fit", FITS),
+            ("style", STYLES),
+            ("season", SEASONS),
+        ],
     )
     def test_every_vocabulary_value_is_accepted(self, key, values):
         for value in values:
-            ItemUpdate(tags={key: [value] if key in ("style", "season") else value})
+            edit = {key: [value] if key in ("style", "season") else value}
+            assert normalize_tag_edits(edit) == edit
 
 
 # --------------------------------------------------------------------------
@@ -150,14 +150,26 @@ class TestPatchTags:
         assert (await _reload(db_session, item.id)).tags == {"pattern": "solid", "size": "M"}
 
     @pytest.mark.asyncio
-    async def test_unknown_value_is_rejected_and_nothing_changes(
-        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    @pytest.mark.parametrize(
+        "tags",
+        [
+            {"pattern": "swirly"},
+            {"pattern": "none"},
+            {"style": ["goth"]},
+            {"material": "unobtainium"},
+            {"material": "x" * 60},
+        ],
+        ids=["pattern", "pattern-none", "style", "material", "long-material"],
+    )
+    async def test_unknown_value_is_rejected_with_a_code_and_nothing_changes(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession, tags
     ):
         item = await _make_item(db_session, test_user, tags={"pattern": "solid"}, pattern="solid")
 
-        response = await _patch(client, auth_headers, item.id, {"tags": {"pattern": "swirly"}})
+        response = await _patch(client, auth_headers, item.id, {"tags": tags})
 
         assert response.status_code == 422
+        assert response.json()["detail"]["error_code"] == "INVALID_TAG_VALUE"
         refreshed = await _reload(db_session, item.id)
         assert refreshed.tags == {"pattern": "solid"}
         assert refreshed.pattern == "solid"
@@ -168,7 +180,11 @@ class TestPatchTags:
     ):
         # Rows tagged before the vocabulary settled can hold values it no longer lists.
         item = await _make_item(
-            db_session, test_user, tags={"pattern": "paisley", "fit": "regular"}, pattern="paisley"
+            db_session,
+            test_user,
+            tags={"pattern": "paisley", "material": "100% Linen", "fit": "regular"},
+            pattern="paisley",
+            material="100% Linen",
         )
 
         response = await _patch(client, auth_headers, item.id, {"tags": {"fit": "slim"}})
@@ -177,7 +193,32 @@ class TestPatchTags:
         refreshed = await _reload(db_session, item.id)
         assert refreshed.tags["pattern"] == "paisley"
         assert refreshed.pattern == "paisley"
+        assert refreshed.tags["material"] == "100% Linen"
         assert refreshed.tags["fit"] == "slim"
+
+    @pytest.mark.asyncio
+    async def test_an_old_off_list_value_sent_back_unchanged_is_left_as_it_was(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    ):
+        item = await _make_item(
+            db_session,
+            test_user,
+            tags={"pattern": "paisley", "material": "100% Linen"},
+            pattern="paisley",
+            material="100% Linen",
+        )
+
+        response = await _patch(
+            client,
+            auth_headers,
+            item.id,
+            {"tags": {"pattern": "paisley", "material": "100% linen"}},
+        )
+
+        assert response.status_code == 200
+        refreshed = await _reload(db_session, item.id)
+        assert refreshed.tags == {"pattern": "paisley", "material": "100% Linen"}
+        assert refreshed.material == "100% Linen"
 
     @pytest.mark.asyncio
     async def test_stored_values_are_cleaned_in_json_and_column(
@@ -287,6 +328,7 @@ class TestUserEditedKeys:
 
         await _patch(client, auth_headers, item.id, {"primary_color": "navy"})
 
+        # The server reorders the colour list for the new primary; the person did not edit it.
         assert (await _reload(db_session, item.id)).tags["user_edited_keys"] == ["primary_color"]
 
     @pytest.mark.asyncio
@@ -298,6 +340,76 @@ class TestUserEditedKeys:
         await _patch(client, auth_headers, item.id, {"type": "t-shirt", "subtype": "crew"})
 
         assert (await _reload(db_session, item.id)).tags["user_edited_keys"] == ["type", "subtype"]
+
+    @pytest.mark.asyncio
+    async def test_setting_the_type_back_to_unknown_hands_it_to_the_ai(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    ):
+        item = await _make_item(
+            db_session, test_user, type="shirt", tags={"user_edited_keys": ["type", "pattern"]}
+        )
+
+        response = await _patch(client, auth_headers, item.id, {"type": "unknown"})
+
+        assert response.status_code == 200
+        assert (await _reload(db_session, item.id)).tags["user_edited_keys"] == ["pattern"]
+
+    @pytest.mark.asyncio
+    async def test_unlocking_the_only_locked_key_leaves_no_list(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    ):
+        item = await _make_item(
+            db_session, test_user, type="shirt", tags={"user_edited_keys": ["type"]}
+        )
+
+        await _patch(client, auth_headers, item.id, {"type": "unknown"})
+
+        assert "user_edited_keys" not in (await _reload(db_session, item.id)).tags
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "body",
+        [{"primary_color": "unknown"}, {"tags": {"primary_color": "unknown"}}],
+        ids=["top-level", "in-tags"],
+    )
+    async def test_an_unknown_primary_colour_hands_it_to_the_ai(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession, body
+    ):
+        item = await _make_item(
+            db_session,
+            test_user,
+            primary_color="white",
+            colors=["white", "black"],
+            tags={
+                "primary_color": "white",
+                "colors": ["white", "black"],
+                "user_edited_keys": ["primary_color", "pattern"],
+            },
+        )
+
+        response = await _patch(client, auth_headers, item.id, body)
+
+        assert response.status_code == 200
+        done = await _reload(db_session, item.id)
+        assert done.tags["user_edited_keys"] == ["pattern"]
+        assert done.colors == ["white", "black"]
+
+    @pytest.mark.asyncio
+    async def test_a_subtype_cleared_with_a_type_change_is_handed_back(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    ):
+        # The form drops a subtype that belonged to the old type; the AI may suggest a new one.
+        item = await _make_item(
+            db_session,
+            test_user,
+            type="t-shirt",
+            subtype="button-down",
+            tags={"user_edited_keys": ["subtype"]},
+        )
+
+        await _patch(client, auth_headers, item.id, {"type": "polo", "subtype": None})
+
+        assert (await _reload(db_session, item.id)).tags["user_edited_keys"] == ["type"]
 
     @pytest.mark.asyncio
     async def test_resending_unchanged_form_fields_records_nothing(
@@ -350,3 +462,151 @@ class TestUserEditedKeys:
 
         await _patch(client, auth_headers, item.id, {"tags": {"user_edited_keys": []}})
         assert (await _reload(db_session, item.id)).tags["user_edited_keys"] == ["fit"]
+
+
+class TestColoursStayInStep:
+    """A colour change sent outside `tags` reaches the tags JSON and the colour list (#294)."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "body",
+        [{"primary_color": "navy"}, {"tags": {"primary_color": "navy"}}],
+        ids=["top-level", "in-tags"],
+    )
+    async def test_a_new_primary_replaces_the_old_one_at_the_front_of_the_list(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession, body
+    ):
+        item = await _make_item(
+            db_session,
+            test_user,
+            primary_color="white",
+            colors=["white", "black"],
+            tags={"primary_color": "white", "colors": ["white", "black"]},
+        )
+
+        response = await _patch(client, auth_headers, item.id, body)
+
+        assert response.status_code == 200
+        done = await _reload(db_session, item.id)
+        assert done.primary_color == "navy"
+        assert done.colors == ["navy", "black"]
+        assert done.tags["primary_color"] == "navy"
+        assert done.tags["colors"] == ["navy", "black"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("tags", "expected"),
+        [
+            ({"colors": ["red", "blue"]}, ["green", "blue"]),
+            ({"colors": ["blue", "red"], "primary_color": "red"}, ["green", "blue"]),
+        ],
+        ids=["first-colour", "tags-primary"],
+    )
+    async def test_a_new_primary_replaces_the_old_one_when_the_column_is_empty(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession, tags, expected
+    ):
+        item = await _make_item(db_session, test_user, colors=tags["colors"], tags=tags)
+
+        await _patch(client, auth_headers, item.id, {"primary_color": "green"})
+
+        done = await _reload(db_session, item.id)
+        assert done.colors == expected
+        assert done.tags["colors"] == expected
+
+    @pytest.mark.asyncio
+    async def test_unknown_as_the_primary_leaves_the_colour_list_alone(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    ):
+        item = await _make_item(
+            db_session,
+            test_user,
+            primary_color="white",
+            colors=["white", "black"],
+            tags={"primary_color": "white", "colors": ["white", "black"]},
+        )
+
+        await _patch(client, auth_headers, item.id, {"primary_color": "unknown"})
+
+        done = await _reload(db_session, item.id)
+        assert done.colors == ["white", "black"]
+        assert done.tags["colors"] == ["white", "black"]
+
+    @pytest.mark.asyncio
+    async def test_a_colour_list_sent_at_the_top_level_reaches_the_tags(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    ):
+        item = await _make_item(db_session, test_user, colors=["white"], tags={"colors": ["white"]})
+
+        await _patch(client, auth_headers, item.id, {"colors": ["white", "red"]})
+
+        done = await _reload(db_session, item.id)
+        assert done.colors == ["white", "red"]
+        assert done.tags["colors"] == ["white", "red"]
+
+    @pytest.mark.asyncio
+    async def test_resending_the_same_primary_changes_nothing(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    ):
+        item = await _make_item(
+            db_session,
+            test_user,
+            primary_color="white",
+            colors=["white", "black"],
+            tags={"primary_color": "white", "colors": ["white", "black"]},
+        )
+
+        await _patch(client, auth_headers, item.id, {"primary_color": "white"})
+
+        done = await _reload(db_session, item.id)
+        assert done.colors == ["white", "black"]
+        assert "user_edited_keys" not in done.tags
+
+    @pytest.mark.asyncio
+    async def test_an_explicit_list_with_the_new_primary_is_kept_as_sent(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    ):
+        item = await _make_item(
+            db_session, test_user, primary_color="white", colors=["white", "black"]
+        )
+
+        await _patch(
+            client,
+            auth_headers,
+            item.id,
+            {"primary_color": "navy", "tags": {"colors": ["navy", "white"]}},
+        )
+
+        done = await _reload(db_session, item.id)
+        assert done.colors == ["navy", "white"]
+        assert done.tags["colors"] == ["navy", "white"]
+
+
+class TestOffListStyleAlreadyOnTheItem:
+    @pytest.mark.asyncio
+    async def test_an_old_off_list_style_left_switched_on_does_not_block_a_save(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    ):
+        item = await _make_item(db_session, test_user, tags={"style": ["grunge", "casual"]})
+
+        response = await _patch(
+            client, auth_headers, item.id, {"tags": {"style": ["grunge", "sporty"]}}
+        )
+
+        assert response.status_code == 200
+        assert (await _reload(db_session, item.id)).tags["style"] == ["grunge", "sporty"]
+
+    @pytest.mark.asyncio
+    async def test_a_new_off_list_style_is_still_rejected(
+        self, client: AsyncClient, test_user, auth_headers, db_session: AsyncSession
+    ):
+        item = await _make_item(db_session, test_user, tags={"style": ["casual"]})
+
+        response = await _patch(client, auth_headers, item.id, {"tags": {"style": ["goth"]}})
+
+        assert response.status_code == 422
+        assert "goth" in response.text
+        assert (await _reload(db_session, item.id)).tags["style"] == ["casual"]
+
+    def test_the_check_accepts_values_the_item_already_has(self):
+        cleaned = normalize_tag_edits({"season": ["Monsoon", "summer"]}, {"season": ["monsoon"]})
+        assert cleaned == {"season": ["monsoon", "summer"]}

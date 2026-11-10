@@ -4,7 +4,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, computed_field, field_validator
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -17,6 +17,7 @@ from app.models.outfit import (
     FamilyOutfitRating,
     Outfit,
     OutfitItem,
+    OutfitSource,
     OutfitStatus,
     TimeOfDay,
     UserFeedback,
@@ -33,7 +34,7 @@ from app.services.external_outfit_service import ExternalOutfitService
 from app.services.image_service import ImageService
 from app.services.item_service import ItemService
 from app.services.learning_service import LearningService
-from app.services.outfit_service import OutfitListFilters, OutfitService
+from app.services.outfit_service import OutfitListFilters, OutfitService, parse_enum_csv
 from app.services.recommendation_service import (
     AIRecommendationError,
     InsufficientWardrobeError,
@@ -68,6 +69,21 @@ class WeatherOverrideRequest(BaseModel):
     condition: str = Field(default="unknown", description="Weather condition")
     precipitation_chance: int = Field(default=0, ge=0, le=100)
     humidity: int = Field(default=50, ge=0, le=100)
+
+    def to_weather(self) -> WeatherData:
+        return WeatherData(
+            temperature=self.temperature,
+            feels_like=self.temperature if self.feels_like is None else self.feels_like,
+            humidity=self.humidity,
+            precipitation_chance=self.precipitation_chance,
+            precipitation_mm=0,
+            wind_speed=0,
+            condition=self.condition,
+            condition_code=0,
+            is_day=True,
+            uv_index=0,
+            timestamp=datetime.utcnow(),
+        )
 
 
 def _default_occasion(user: User) -> str:
@@ -184,7 +200,9 @@ class OutfitListResponse(BaseModel):
 
 
 class BulkOutfitFilters(BaseModel):
-    status_filter: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    status: str | None = None
     occasion: str | None = None
     date_from: date | None = None
     date_to: date | None = None
@@ -192,13 +210,26 @@ class BulkOutfitFilters(BaseModel):
     is_lookbook: bool | None = None
     is_replacement: bool | None = None
     has_source_item: bool | None = None
+    worn: bool | None = None
     item_type: str | None = None
     search: str | None = None
     occasions: Annotated[list[str] | None, Field(max_length=MAX_SEARCH_OCCASIONS)] = None
     cloned_from_outfit_id: UUID | None = None
 
+    @field_validator("status", "source")
+    @classmethod
+    def _every_value_is_known(cls, value: str | None, info: ValidationInfo) -> str | None:
+        enum_type = OutfitStatus if info.field_name == "status" else OutfitSource
+        if value is not None:
+            _, unknown = parse_enum_csv(value, enum_type)
+            if unknown:
+                raise ValueError(f"Unknown {info.field_name}: {', '.join(unknown)}")
+        return value
+
 
 class BulkDeleteOutfitsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     # Explicit selection
     outfit_ids: list[UUID] | None = None
 
@@ -418,22 +449,7 @@ async def suggest_outfit(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> OutfitResponse:
     await rate_limit_by_user(str(current_user.id), "suggest", max_requests=10, window_seconds=60)
-    weather_override = None
-    if request.weather_override:
-        w = request.weather_override
-        weather_override = WeatherData(
-            temperature=w.temperature,
-            feels_like=w.feels_like or w.temperature,
-            humidity=w.humidity,
-            precipitation_chance=w.precipitation_chance,
-            precipitation_mm=0,
-            wind_speed=0,
-            condition=w.condition,
-            condition_code=0,
-            is_day=True,
-            uv_index=0,
-            timestamp=datetime.utcnow(),
-        )
+    weather_override = request.weather_override.to_weather() if request.weather_override else None
 
     service = RecommendationService(db)
 
@@ -485,22 +501,7 @@ async def suggest_outfit_options(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> list[OutfitResponse]:
     await rate_limit_by_user(str(current_user.id), "suggest", max_requests=10, window_seconds=60)
-    weather_override = None
-    if request.weather_override:
-        w = request.weather_override
-        weather_override = WeatherData(
-            temperature=w.temperature,
-            feels_like=w.feels_like or w.temperature,
-            humidity=w.humidity,
-            precipitation_chance=w.precipitation_chance,
-            precipitation_mm=0,
-            wind_speed=0,
-            condition=w.condition,
-            condition_code=0,
-            is_day=True,
-            uv_index=0,
-            timestamp=datetime.utcnow(),
-        )
+    weather_override = request.weather_override.to_weather() if request.weather_override else None
 
     service = RecommendationService(db)
 
@@ -621,6 +622,7 @@ async def list_outfits(
     is_lookbook: bool | None = Query(None, description="true for templates only"),
     is_replacement: bool | None = Query(None),
     has_source_item: bool | None = Query(None),
+    worn: bool | None = Query(None, description="true for outfits with a wear date"),
     item_type: str | None = Query(None),
     source_type: str | None = Query(
         None, description="Legacy alias for item_type used by /pairings"
@@ -641,7 +643,7 @@ async def list_outfits(
 
     filters = OutfitListFilters(
         user_id=target_user_id,
-        status_filter=status_filter,
+        status=status_filter,
         occasion=occasion,
         date_from=date_from,
         date_to=date_to,
@@ -649,6 +651,7 @@ async def list_outfits(
         is_lookbook=is_lookbook,
         is_replacement=is_replacement,
         has_source_item=has_source_item,
+        worn=worn,
         item_type=item_type or source_type,
         family_member_view=family_member_id is not None,
         search=search,
@@ -690,20 +693,7 @@ async def bulk_delete_outfits(
     if request.select_all:
         list_filters = OutfitListFilters(
             user_id=current_user.id,
-            status_filter=request.filters.status_filter if request.filters else None,
-            occasion=request.filters.occasion if request.filters else None,
-            date_from=request.filters.date_from if request.filters else None,
-            date_to=request.filters.date_to if request.filters else None,
-            source=request.filters.source if request.filters else None,
-            is_lookbook=request.filters.is_lookbook if request.filters else None,
-            is_replacement=request.filters.is_replacement if request.filters else None,
-            has_source_item=request.filters.has_source_item if request.filters else None,
-            item_type=request.filters.item_type if request.filters else None,
-            search=request.filters.search if request.filters else None,
-            occasions=request.filters.occasions if request.filters else None,
-            cloned_from_outfit_id=request.filters.cloned_from_outfit_id
-            if request.filters
-            else None,
+            **(request.filters or BulkOutfitFilters()).model_dump(),
         )
         outfit_ids = await service.get_ids_by_filter(
             list_filters,

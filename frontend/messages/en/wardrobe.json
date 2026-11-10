@@ -97,9 +97,6 @@
     "deleteError": "Failed to delete items",
     "deletePartialFailed": "{count, plural, one {Failed to delete # item} other {Failed to delete # items}}",
     "deleteSuccess": "{count, plural, one {# item deleted} other {# items deleted}}",
-    "reanalyzeAndReplaceConfirmAction": "Re-analyze and replace",
-    "reanalyzeAndReplaceConfirmDescription": "The AI looks at each photo again and replaces its earlier guesses. Tags you edited yourself are kept. Edits made before this feature existed were not recorded, so they can be replaced too. This uses one AI request per item and may take a while.",
-    "reanalyzeAndReplaceConfirmTitle": "Re-analyze and replace AI tags for {count, plural, one {# item} other {# items}}?",
     "reanalyzeCooldown": "{count, plural, one {# item cooling down after a recent failure} other {# items cooling down after a recent failure}}",
     "reanalyzeError": "Failed to queue items for re-analysis",
     "reanalyzeMany": "Queued {count} items for re-analysis. This may take a while.",
@@ -116,7 +113,10 @@
     "rotateError": "Failed to queue rotation",
     "rotatePartialFailed": "{count, plural, one {Failed to queue # item for rotation} other {Failed to queue # items for rotation}}",
     "rotateQueued": "{count, plural, one {Queued # item for rotation} other {Queued # items for rotation}}",
-    "rotateSkipped": "{count, plural, one {# item skipped (already processing)} other {# items skipped (already processing)}}"
+    "rotateSkipped": "{count, plural, one {# item skipped (already processing)} other {# items skipped (already processing)}}",
+    "reanalyzeAndReplaceConfirmAction": "Re-analyze and replace",
+    "reanalyzeAndReplaceConfirmDescription": "The AI looks at each photo again and replaces its earlier guesses. Tags you edited yourself are kept. Edits made before this feature existed were not recorded, so they can be replaced too. This uses one AI request per item and may take a while.",
+    "reanalyzeAndReplaceConfirmTitle": "Re-analyze and replace AI tags for {count, plural, one {# item} other {# items}}?"
   },
   "bulkDelete": {
     "confirmDescription": "This will permanently delete the selected items and their images. This action cannot be undone.",
@@ -153,7 +153,6 @@
   "itemCount": "{count, plural, one {# item in your wardrobe} other {# items in your wardrobe}}",
   "itemDetail": {
     "actions": {
-      "backgroundRemovalStarted": "Removing background…",
       "backgroundRemoveError": "Failed to remove background",
       "backgroundRemoved": "Background removed",
       "cancelEditing": "Cancel editing",
@@ -173,14 +172,15 @@
       "markWashed": "Mark Washed",
       "originalRestoreError": "Failed to restore original image",
       "originalRestored": "Original image restored",
+      "saveError": "Failed to save item",
       "washError": "Failed to mark as washed",
       "logWear": "Log wear",
       "wearLogged": "Wear logged",
       "wearLogError": "Failed to log wear",
-      "washed": "Item marked as washed"
+      "washed": "Item marked as washed",
+      "backgroundRemovalStarted": "Removing background…"
     },
     "brand": "Brand",
-    "labelPhotoHint": "Add a close-up of the label as an extra photo so the AI can read the brand and size.",
     "name": "Name",
     "notes": "Notes",
     "placeholders": {
@@ -188,36 +188,31 @@
       "brandName": "Brand name",
       "itemName": "Item name",
       "selectColor": "Select color",
-      "subtype": "e.g. leggings, chelsea",
+      "subtype": "e.g. chinos, chelsea",
       "washIntervalDefault": "Default: {count}"
     },
     "primaryColor": "Primary Color",
-    "replaceAnalysis": {
-      "confirm": "Re-analyze and replace",
-      "description": "The AI looks at the photo again and replaces its earlier guesses. Tags you edited yourself are kept. Edits made before this feature existed were not recorded, so they can be replaced too.",
-      "title": "Re-analyze and replace AI tags?"
-    },
     "subtype": "Subtype",
     "tagsEditor": {
       "fit": "Fit",
       "formality": "Formality",
       "hint": "Fix anything the AI got wrong. Your changes are kept if the item is analyzed again.",
+      "invalidValue": "A tag has a value that isn't on the list. Pick it again and save.",
       "material": "Material",
       "none": "None",
       "pattern": "Pattern",
       "season": "Season",
       "secondaryColor": "Secondary color",
-      "size": "Size",
-      "sizePlaceholder": "e.g. M, 42, W32 L30",
       "style": "Style",
       "tertiaryColor": "Tertiary color",
-      "title": "AI tags"
+      "title": "AI tags",
+      "size": "Size",
+      "sizePlaceholder": "e.g. M, 42, W32 L30"
     },
     "titles": {
       "analysisInProgress": "Analysis in progress...",
       "deleteImage": "Delete image",
       "findMatchingOutfits": "Find matching outfits",
-      "reanalyzeAndReplace": "Re-analyze and replace AI tags",
       "reanalyzeWithAI": "Re-analyze with AI",
       "removeBackground": "Remove background",
       "replaceImage": "Replace image",
@@ -227,7 +222,8 @@
       "splitPhoto": "Split photo",
       "suggestOutfit": "Create outfit with this item",
       "toggleFavorite": "Toggle favorite",
-      "undoBackgroundRemoval": "Undo background removal"
+      "undoBackgroundRemoval": "Undo background removal",
+      "reanalyzeAndReplace": "Re-analyze and replace AI tags"
     },
     "type": "Type",
     "unrecognizedType": "AI detected “{value}”, which isn't a supported type. Pick the closest type below; you can keep “{value}” as the subtype.",
@@ -248,7 +244,6 @@
       "needsWashing": "Needs washing",
       "never": "Never",
       "primaryImage": "Primary",
-      "sizeBadge": "Size {size}",
       "timeline": "{count, plural, one {Timeline (# event)} other {Timeline (# events)}}",
       "today": "Today",
       "totalWears": "Total wears",
@@ -259,9 +254,16 @@
       "wearHistory": "Wear History",
       "wears": "wears",
       "wearsSinceWash": "Wears since wash: {current}/{max}",
-      "wornCount": "{count, plural, one {Worn # time} other {Worn # times}}"
+      "wornCount": "{count, plural, one {Worn # time} other {Worn # times}}",
+      "sizeBadge": "Size {size}"
     },
-    "washInterval": "Wash Interval"
+    "washInterval": "Wash Interval",
+    "labelPhotoHint": "Add a close-up of the label as an extra photo so the AI can read the brand and size.",
+    "replaceAnalysis": {
+      "confirm": "Re-analyze and replace",
+      "description": "The AI looks at the photo again and replaces its earlier guesses. Tags you edited yourself are kept. Edits made before this feature existed were not recorded, so they can be replaced too.",
+      "title": "Re-analyze and replace AI tags?"
+    }
   },
   "lightbox": {
     "openInWardrobe": "Open in Wardrobe"
@@ -281,7 +283,7 @@
   },
   "splitPhoto": {
     "addBox": "Add a box",
-    "archiveNote": "The original photo is archived, not deleted. You can restore it from your archive.",
+    "archiveNote": "The original photo is kept but hidden from your wardrobe. It is not deleted.",
     "boxLabel": "Garment {number}",
     "create": "{count, plural, =0 {Create items} one {Create # item} other {Create # items}}",
     "createFailed": "Could not split the photo",
@@ -289,6 +291,14 @@
     "description": "Find each garment in this photo and make a separate item from it.",
     "detectFailed": "The AI could not look at this photo.",
     "detecting": "Looking for garments…",
+    "errors": {
+      "aiUnreachable": "The AI service could not be reached. Try again, or add a box for each garment.",
+      "imageNotFound": "The photo for this item could not be found.",
+      "rateLimited": "Too many tries in a short time. Wait a minute, then try again.",
+      "sourceArchived": "This item is already archived, so its photo cannot be split again.",
+      "sourceBusy": "This photo is still being rotated or having its background removed. Try again when that finishes.",
+      "visionDisabled": "Automatic garment detection is turned off. Add a box for each garment."
+    },
     "hint": "Drag a box to move it, or drag a corner to resize it.",
     "noneFound": "No garments were found. Add a box and drag it over a garment.",
     "photoAlt": "The photo to split",

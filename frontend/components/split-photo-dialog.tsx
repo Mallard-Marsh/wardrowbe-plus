@@ -6,8 +6,8 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getErrorMessage } from '@/lib/api';
-import { useDetectGarments, useSplitItem } from '@/lib/hooks/use-split';
+import { ApiError } from '@/lib/api';
+import { useGarmentDetection, useSplitItem } from '@/lib/hooks/use-split';
 import {
   MAX_BOXES,
   moveBox,
@@ -38,6 +38,12 @@ interface Drag {
   start: Box;
 }
 
+function errorCode(error: unknown): string | undefined {
+  if (!(error instanceof ApiError)) return undefined;
+  const data = error.data as { detail?: { error_code?: string } } | undefined;
+  return data?.detail?.error_code;
+}
+
 const HANDLES: { handle: Handle; className: string }[] = [
   { handle: 'nw', className: '-left-2 -top-2 cursor-nwse-resize' },
   { handle: 'ne', className: '-right-2 -top-2 cursor-nesw-resize' },
@@ -48,36 +54,29 @@ const HANDLES: { handle: Handle; className: string }[] = [
 export function SplitPhotoDialog({ itemId, imageUrl, open, onClose, onDone }: SplitPhotoDialogProps) {
   const t = useTranslations('wardrobe.splitPhoto');
   const tc = useTranslations('common');
-  const detect = useDetectGarments();
+  const detect = useGarmentDetection(itemId, open);
   const split = useSplitItem();
   const [boxes, setBoxes] = useState<NumberedBox[]>([]);
   const nextKey = useRef(1);
   const frame = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
-  const started = useRef(false);
-
-  const runDetection = () => {
-    detect.mutate(itemId, {
-      onSuccess: ({ garments }) =>
-        setBoxes(
-          garments.slice(0, MAX_BOXES).map((g) => ({
-            key: nextKey.current++,
-            left: g.left,
-            top: g.top,
-            width: g.width,
-            height: g.height,
-          })),
-        ),
-    });
-  };
+  const addedDetectionAt = useRef(0);
 
   useEffect(() => {
-    if (!open || started.current) return;
-    started.current = true;
-    runDetection();
-    // runDetection only needs to run once per opening
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    if (!detect.data || detect.dataUpdatedAt === addedDetectionAt.current) return;
+    addedDetectionAt.current = detect.dataUpdatedAt;
+    const { garments } = detect.data;
+    setBoxes((all) => [
+      ...all,
+      ...garments.slice(0, MAX_BOXES - all.length).map((g) => ({
+        key: nextKey.current++,
+        left: g.left,
+        top: g.top,
+        width: g.width,
+        height: g.height,
+      })),
+    ]);
+  }, [detect.data, detect.dataUpdatedAt]);
 
   const begin = (event: React.PointerEvent, box: NumberedBox, mode: Drag['mode']) => {
     event.preventDefault();
@@ -116,13 +115,43 @@ export function SplitPhotoDialog({ itemId, imageUrl, open, onClose, onDone }: Sp
       onClose();
       onDone?.();
     } catch (error) {
-      toast.error(getErrorMessage(error, t('createFailed')));
+      if (error instanceof ApiError && error.status === 401) return;
+      toast.error(splitErrorMessage(error));
     }
   };
 
-  const detecting = detect.isPending;
-  const detectFailed = detect.isError;
-  const noneFound = detect.isSuccess && boxes.length === 0 && detect.data.garments.length === 0;
+  const splitErrorMessage = (error: unknown) => {
+    switch (errorCode(error)) {
+      case 'SOURCE_ARCHIVED':
+        return t('errors.sourceArchived');
+      case 'SOURCE_BUSY':
+        return t('errors.sourceBusy');
+      case 'IMAGE_NOT_FOUND':
+        return t('errors.imageNotFound');
+      default:
+        return t('createFailed');
+    }
+  };
+
+  const detectErrorMessage = (error: unknown) => {
+    if (error instanceof ApiError && error.status === 429) return t('errors.rateLimited');
+    switch (errorCode(error)) {
+      case 'AI_VISION_DISABLED':
+        return t('errors.visionDisabled');
+      case 'AI_UNREACHABLE':
+        return t('errors.aiUnreachable');
+      case 'IMAGE_NOT_FOUND':
+        return t('errors.imageNotFound');
+      default:
+        return t('detectFailed');
+    }
+  };
+
+  const detecting = detect.isFetching;
+  const detectFailed = detect.isError && !detecting;
+  const visionDisabled = errorCode(detect.error) === 'AI_VISION_DISABLED';
+  const noneFound =
+    detect.isSuccess && !detecting && boxes.length === 0 && detect.data.garments.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -179,7 +208,7 @@ export function SplitPhotoDialog({ itemId, imageUrl, open, onClose, onDone }: Sp
               </div>
             ))}
             {detecting && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/70 text-sm">
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/70 text-sm">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 {t('detecting')}
               </div>
@@ -189,10 +218,12 @@ export function SplitPhotoDialog({ itemId, imageUrl, open, onClose, onDone }: Sp
 
         {detectFailed && (
           <div className="flex items-center justify-between gap-2 text-sm text-destructive">
-            <span>{t('detectFailed')}</span>
-            <Button variant="outline" size="sm" onClick={runDetection}>
-              {t('retry')}
-            </Button>
+            <span>{detectErrorMessage(detect.error)}</span>
+            {!visionDisabled && (
+              <Button variant="outline" size="sm" onClick={() => detect.refetch()}>
+                {t('retry')}
+              </Button>
+            )}
           </div>
         )}
         {noneFound && <p className="text-sm text-muted-foreground">{t('noneFound')}</p>}
@@ -223,7 +254,7 @@ export function SplitPhotoDialog({ itemId, imageUrl, open, onClose, onDone }: Sp
           <Button
             variant="outline"
             size="sm"
-            disabled={detecting || boxes.length >= MAX_BOXES}
+            disabled={boxes.length >= MAX_BOXES}
             onClick={() => setBoxes((all) => [...all, { key: nextKey.current++, ...newBox(all.length) }])}
           >
             <Plus className="mr-1 h-4 w-4" />

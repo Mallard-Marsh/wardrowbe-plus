@@ -28,10 +28,10 @@ from app.services.ai_service import (
 from app.services.image_service import ImageService
 from app.utils.locale import DEFAULT_LOCALE
 from app.workers.db import get_db_session
+from app.workers.queues import WORKER_MAX_TRIES
 
 logger = logging.getLogger(__name__)
 
-TAGGING_MAX_TRIES = 3
 
 # Margin left below job_timeout so the in-job call budget always fires before
 # arq's own kill (which does not retry - see _tagging_call_budget).
@@ -49,7 +49,7 @@ class ItemVanishedError(Exception):
 
 
 def _is_final_attempt(ctx: dict) -> bool:
-    return int(ctx.get("job_try") or 1) >= TAGGING_MAX_TRIES
+    return int(ctx.get("job_try") or 1) >= WORKER_MAX_TRIES
 
 
 def retry_delay_seconds(ctx: dict) -> int:
@@ -202,10 +202,13 @@ def _ai_may_set(
 
     Normally the AI only fills what is empty (an unknown type or colour counts as empty).
     On "re-analyse and replace" it overwrites its own earlier answers, but never a field
-    in `kept` (the keys a person changed by hand) and never with an empty or unknown answer.
+    in `kept` (the keys a person set or cleared by hand, which it never refills either)
+    and never with an empty or unknown answer.
     """
+    if field in kept:
+        return False
     if replace:
-        return field not in kept and value not in _NOTHING and value != "unknown"
+        return value not in _NOTHING and value != "unknown"
     if field in ("type", "primary_color"):
         return not current or current == "unknown"
     return current in _NOTHING
@@ -329,10 +332,13 @@ async def tag_item_image(
             # same loop would otherwise make the guard for the later two fields see the
             # already-updated status and skip them even outside of a race.
             was_pending = item.tagging_status == TaggingStatus.pending
-            # Keys a person changed by hand (maintained by ItemService.update).
+            # Keys the person set or cleared by hand; an empty one stays empty.
             kept = frozenset((item.tags or {}).get("user_edited_keys") or [])
 
             for field, value in ai_fields.items():
+                # An item archived before or while its analysis ran keeps its archived status.
+                if field == "status" and item.is_archived:
+                    value = ItemStatus.archived
                 # Always update AI metadata fields (including tags JSONB and description)
                 if field in (
                     "ai_processed",
@@ -370,6 +376,10 @@ async def tag_item_image(
                 elif field in ("tagging_status", "tagged_by", "tagged_at"):
                     if was_pending:
                         setattr(item, field, value)
+                elif field == "subtype" and item.type != ai_fields["type"]:
+                    # A subtype only fits the type it was seen as ("crew-neck" on a T-shirt the
+                    # person has since made a blouse).
+                    continue
                 # Content fields: fill what is empty, or replace the AI's own earlier answer
                 # (see _ai_may_set); a value a person set is never touched.
                 elif _ai_may_set(
@@ -384,10 +394,9 @@ async def tag_item_image(
                 and "primary_color" in kept
                 and "colors" not in kept
                 and item.primary_color
-                and item.colors
                 and item.primary_color not in item.colors
             ):
-                item.colors = [item.primary_color, *item.colors]
+                item.colors = [item.primary_color, *(item.colors or [])]
 
             # The guards above may have kept a user's column value while the
             # AI's went into tags; mirror the columns back so the JSONB and the

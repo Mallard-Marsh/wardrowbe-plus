@@ -63,6 +63,7 @@ import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { SplitPhotoDialog } from '@/components/split-photo-dialog';
+import { ApiError } from '@/lib/api';
 import { useUpdateItem, useDeleteItem, useReanalyzeItem, useRotateImage, useRemoveBackground, useRestoreOriginal, useReplaceItemImage, useLogWear, useLogWash, useWashHistory, useItemWearStats, useItemWearHistory, useAddItemImage, useDeleteItemImage, useSetPrimaryImage } from '@/lib/hooks/use-items';
 import { useLaundryTracking } from '@/lib/hooks/use-preferences';
 import { CLOTHING_SUBTYPES, Item } from '@/lib/types';
@@ -88,8 +89,9 @@ import { ReplaceAnalysisDialog } from '@/components/replace-analysis-dialog';
 import {
   diffTags,
   draftFromTags,
-  primaryColorOf,
+  primaryColorOfItem,
   subtypeAfterTypeChange,
+  type ItemEdits,
   type TagDraft,
 } from '@/lib/tag-edits';
 import { useFeatures } from '@/lib/hooks/use-features';
@@ -115,6 +117,17 @@ interface EditForm {
   wash_interval: number | undefined;
 }
 
+// The sign-in redirect handles these, as in the global error handler.
+function isUnauthorized(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
+function isInvalidTagValue(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false;
+  const data = error.data as { detail?: { error_code?: string } } | undefined;
+  return data?.detail?.error_code === 'INVALID_TAG_VALUE';
+}
+
 function editFormFromItem(item: Item): EditForm {
   return {
     name: item.name || '',
@@ -123,7 +136,7 @@ function editFormFromItem(item: Item): EditForm {
     // supported type doesn't lose what the model actually saw.
     subtype: item.subtype || (item.type === 'unknown' && item.ai_unrecognized_type) || '',
     brand: item.brand || '',
-    primary_color: item.primary_color || '',
+    primary_color: primaryColorOfItem(item) || '',
     notes: item.notes || '',
     favorite: item.favorite,
     wash_interval: item.wash_interval ?? undefined,
@@ -164,8 +177,12 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
     wash_interval: undefined,
   });
   const [tagDraft, setTagDraft] = useState<TagDraft>(() =>
-    draftFromTags(item?.tags ?? { colors: [], style: [], season: [] }),
+    draftFromTags(item?.tags ?? { colors: [], style: [], season: [] }, primaryColorOfItem(item)),
   );
+  // The item as it was when editing began. Saving compares the form with this, not with the
+  // item as it is now: tagging can finish while the form is open, and diffing against the fresh
+  // item would send its new tags back as clears and resend untouched fields as edits.
+  const [editBase, setEditBase] = useState<Item | null>(item);
   const [showWashHistory, setShowWashHistory] = useState(false);
   const [showSplit, setShowSplit] = useState(false);
   const [showWearHistory, setShowWearHistory] = useState(false);
@@ -193,7 +210,8 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
   useEffect(() => {
     if (item) {
       setEditForm(editFormFromItem(item));
-      setTagDraft(draftFromTags(item.tags));
+      setTagDraft(draftFromTags(item.tags, primaryColorOfItem(item)));
+      setEditBase(item);
       setIsEditing(false);
       setActiveImageIndex(0);
     }
@@ -216,32 +234,41 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
   if (!item) return null;
 
   const handleSave = async () => {
-    // Only the tags that differ, and none at all when nothing was touched.
+    const base = editBase ?? item;
+    // Only what the person changed since editing began; an untouched field is not sent at all.
+    const before: EditForm = { ...editFormFromItem(base), subtype: base.subtype || '' };
+    const data: ItemEdits = {};
+    if (editForm.name !== before.name) data.name = editForm.name || undefined;
+    if (editForm.type !== before.type) data.type = editForm.type;
+    const subtype = editForm.subtype.trim();
+    // null (not undefined) so clearing the field actually clears it server-side.
+    if (subtype !== before.subtype) data.subtype = subtype || null;
+    if (editForm.brand !== before.brand) data.brand = editForm.brand || undefined;
+    if (editForm.primary_color !== before.primary_color) {
+      data.primary_color = editForm.primary_color || undefined;
+    }
+    if (editForm.notes !== before.notes) data.notes = editForm.notes || undefined;
+    if (editForm.favorite !== before.favorite) data.favorite = editForm.favorite;
+    if (editForm.wash_interval !== before.wash_interval) data.wash_interval = editForm.wash_interval;
     const tagChanges = diffTags(
-      item.tags,
+      base.tags,
       tagDraft,
       editForm.primary_color || undefined,
-      item.primary_color || primaryColorOf(item.tags),
+      primaryColorOfItem(base),
     );
+    if (Object.keys(tagChanges).length > 0) data.tags = tagChanges;
+
+    if (Object.keys(data).length === 0) {
+      setIsEditing(false);
+      return;
+    }
     try {
-      await updateItem.mutateAsync({
-        id: item.id,
-        data: {
-          name: editForm.name || undefined,
-          type: editForm.type,
-          // null (not undefined) so clearing the field actually clears it server-side.
-          subtype: editForm.subtype.trim() || null,
-          brand: editForm.brand || undefined,
-          primary_color: editForm.primary_color || undefined,
-          notes: editForm.notes || undefined,
-          favorite: editForm.favorite,
-          wash_interval: editForm.wash_interval,
-          ...(Object.keys(tagChanges).length > 0 ? { tags: tagChanges } : {}),
-        },
-      });
+      await updateItem.mutateAsync({ id: item.id, data });
       setIsEditing(false);
     } catch (error) {
       console.error('Failed to update item:', error);
+      if (isUnauthorized(error)) return;
+      toast.error(isInvalidTagValue(error) ? t('tagsEditor.invalidValue') : t('actions.saveError'));
     }
   };
 
@@ -289,6 +316,7 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
       });
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
+      if (!isUnauthorized(error)) toast.error(t('actions.saveError'));
     }
   };
 
@@ -539,7 +567,8 @@ export function ItemDetailDialog({ item, open, onOpenChange }: ItemDetailDialogP
                     // dialog is open (same id, so the effect above doesn't re-run).
                     if (!isEditing) {
                       setEditForm(editFormFromItem(item));
-                      setTagDraft(draftFromTags(item.tags));
+                      setTagDraft(draftFromTags(item.tags, primaryColorOfItem(item)));
+                      setEditBase(item);
                     }
                     setIsEditing(!isEditing);
                   }}

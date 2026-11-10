@@ -1,5 +1,6 @@
 """Splitting a photo with several garments: the reply parser, the crop, and the two endpoints."""
 
+import asyncio
 import json
 from io import BytesIO
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -11,14 +12,21 @@ from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
+from app.database import get_db
+from app.main import app
 from app.models.item import ClothingItem, ItemStatus
+from app.models.preference import UserPreference
 from app.models.user import User
+from app.services.ai_service import DETECTION_PROMPT, AIService, ClothingTags
 from app.services.garment_detector import (
+    DETECTION_EXAMPLE,
     MAX_GARMENTS,
     DetectedGarment,
     parse_detection,
 )
 from app.services.image_service import ImageService
+from app.workers import tagging
 
 
 def _reply(*garments: dict) -> str:
@@ -31,6 +39,13 @@ def _g(left, top, right, bottom, type_="shirt", colors=("blue",)) -> dict:
         "colors": list(colors),
         "box": {"left": left, "top": top, "right": right, "bottom": bottom},
     }
+
+
+ANSWER = _reply(_g(10, 20, 40, 80), _g(55, 20, 90, 80))
+ANSWER_BOXES = [(0.1, 0.2, 0.4, 0.8), (0.55, 0.2, 0.9, 0.8)]
+HALF = (0.0, 0.0, 0.5, 0.5)
+EMPTY = '{"garments": []}'
+EXAMPLE = json.dumps(DETECTION_EXAMPLE)
 
 
 class TestParseDetection:
@@ -47,6 +62,12 @@ class TestParseDetection:
 
         assert (shirt.left, shirt.width) == pytest.approx((0.1, 0.5))
 
+    def test_a_fraction_box_that_overflows_an_edge_is_clamped_not_dropped(self):
+        [shirt] = parse_detection(_reply(_g(0.6, 0.1, 1.03, 0.9)))
+
+        assert (shirt.left, shirt.top) == pytest.approx((0.6, 0.1))
+        assert (shirt.width, shirt.height) == pytest.approx((0.4, 0.8))
+
     def test_reads_a_box_given_as_a_list(self):
         reply = json.dumps({"garments": [{"type": "jeans", "box": [10, 10, 50, 90]}]})
 
@@ -55,12 +76,62 @@ class TestParseDetection:
         assert jeans.type == "jeans"
         assert jeans.width == pytest.approx(0.4)
 
-    def test_accepts_a_bare_list_and_fenced_json(self):
-        bare = json.dumps([_g(0, 0, 50, 50)])
-        fenced = "Here you go:\n```json\n" + _reply(_g(0, 0, 50, 50)) + "\n```"
+    @pytest.mark.parametrize(
+        ("reply", "expected"),
+        [
+            (json.dumps([_g(0, 0, 50, 50)]), [HALF]),
+            ("Here you go:\n```json\n" + _reply(_g(0, 0, 50, 50)) + "\n```", [HALF]),
+            ("Box format [l,t,r,b]; {shirt} found. " + ANSWER, ANSWER_BOXES),
+            (f"With no clothing I would return {EMPTY}. Answer: {ANSWER}", ANSWER_BOXES),
+            (f"```json\n{EMPTY}\n```\n```json\n{ANSWER}\n```", ANSWER_BOXES),
+            (f"The example was {EXAMPLE}. Mine: {ANSWER}", ANSWER_BOXES),
+            (f"Like {EXAMPLE} but as a list: {json.dumps([_g(0, 0, 50, 50)])}", [HALF]),
+            (_reply(_g(100, 200, 600, 800)), [(0.1, 0.2, 0.6, 0.8)]),
+            (
+                json.dumps({"garments": [{"type": "shirt", "box_2d": [200, 100, 800, 600]}]}),
+                [(0.1, 0.2, 0.6, 0.8)],
+            ),
+            (
+                _reply(_g(41, 39, 330, 95), _g(340, 41, 670, 94), _g(681, 42, 972, 95)),
+                [(0.041, 0.39, 0.33, 0.95), (0.34, 0.41, 0.67, 0.94), (0.681, 0.42, 0.972, 0.95)],
+            ),
+            (
+                "```json\n"
+                + _reply(_g(5, 30, 30, 90), _g(35, 40, 65, 88), _g(70, 45, 95, 88))
+                + "\n```",
+                [(0.05, 0.3, 0.3, 0.9), (0.35, 0.4, 0.65, 0.88), (0.7, 0.45, 0.95, 0.88)],
+            ),
+            (f"[]\n{ANSWER}", ANSWER_BOXES),
+            (f"Example {EXAMPLE}. Answer: {EMPTY}", []),
+            (f"```json\n{ANSWER}\n```\nIf none I would return {EMPTY}", ANSWER_BOXES),
+        ],
+        ids=[
+            "bare-list",
+            "fenced",
+            "brackets-and-braces-in-reasoning",
+            "empty-example-echoed-in-prose",
+            "empty-example-echoed-fenced",
+            "shirt-example-echoed",
+            "shirt-example-then-bare-list",
+            "per-mille",
+            "box-2d",
+            "per-mille-x-percent-y",
+            "fenced-percent-three-garments",
+            "empty-list-before-answer",
+            "shirt-example-then-real-empty-answer",
+            "fenced-answer-then-empty-in-prose",
+        ],
+    )
+    def test_reads_the_answer_out_of_the_reply(self, reply, expected):
+        edges = [
+            (g.left, g.top, g.left + g.width, g.top + g.height) for g in parse_detection(reply)
+        ]
 
-        assert len(parse_detection(bare)) == 1
-        assert len(parse_detection(fenced)) == 1
+        assert edges == [pytest.approx(e) for e in expected]
+
+    def test_the_prompt_shows_the_example_the_parser_ignores(self):
+        assert json.dumps(DETECTION_EXAMPLE) in DETECTION_PROMPT
+        assert "<<" not in DETECTION_PROMPT
 
     def test_clamps_boxes_into_the_photo(self):
         [shirt] = parse_detection(_reply(_g(-10, -5, 130, 120)))
@@ -100,8 +171,7 @@ class TestParseDetection:
     def test_colours_are_normalised_and_deduplicated(self):
         [g] = parse_detection(_reply(_g(0, 0, 50, 50, colors=("Blue", "blue", 3, "nonsense"))))
 
-        assert g.colors.count("blue") <= 1
-        assert all(isinstance(c, str) for c in g.colors)
+        assert g.colors == ["blue"]
 
     @pytest.mark.parametrize(
         "reply",
@@ -174,8 +244,7 @@ async def _make_item(db_session: AsyncSession, user: User, **overrides) -> Cloth
         medium_path=paths["medium_path"],
         thumbnail_path=paths["thumbnail_path"],
         image_hash=paths["image_hash"],
-        status=ItemStatus.ready,
-        **overrides,
+        **{"status": ItemStatus.ready, **overrides},
     )
     db_session.add(item)
     await db_session.commit()
@@ -183,12 +252,12 @@ async def _make_item(db_session: AsyncSession, user: User, **overrides) -> Cloth
     return item
 
 
-def _ai(garments=None, error=None):
-    ai = MagicMock()
-    ai.detect_garments = AsyncMock(
-        side_effect=error, return_value=garments if garments is not None else []
+def _detects(garments=None, error=None):
+    return patch.object(
+        AIService,
+        "detect_garments",
+        AsyncMock(side_effect=error, return_value=garments if garments is not None else []),
     )
-    return ai
 
 
 class TestDetectGarmentsEndpoint:
@@ -202,7 +271,7 @@ class TestDetectGarmentsEndpoint:
             DetectedGarment("jeans", [], 0.1, 0.5, 0.4, 0.4),
         ]
 
-        with patch("app.api.split.get_ai_service", return_value=_ai(found)):
+        with _detects(found):
             response = await client.post(
                 f"/api/v1/items/{item.id}/detect-garments", headers=auth_headers
             )
@@ -226,7 +295,7 @@ class TestDetectGarmentsEndpoint:
     ):
         item = await _make_item(db_session, test_user)
 
-        with patch("app.api.split.get_ai_service", return_value=_ai([])):
+        with _detects([]):
             response = await client.post(
                 f"/api/v1/items/{item.id}/detect-garments", headers=auth_headers
             )
@@ -266,19 +335,26 @@ class TestDetectGarmentsEndpoint:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_ai_disabled_is_503(
+    async def test_vision_off_is_503_without_calling_the_ai_or_spending_the_quota(
         self, client: AsyncClient, db_session: AsyncSession, test_user, auth_headers
     ):
-        from app.services.ai_service import AIDisabledError
-
         item = await _make_item(db_session, test_user)
+        limiter = AsyncMock()
 
-        with patch("app.api.split.get_ai_service", side_effect=AIDisabledError("off")):
+        with (
+            patch.object(get_settings(), "ai_vision_enabled", False),
+            patch.object(get_settings(), "ai_text_enabled", True),
+            patch("app.api.split.rate_limit_by_user", limiter),
+            _detects([]) as detect,
+        ):
             response = await client.post(
                 f"/api/v1/items/{item.id}/detect-garments", headers=auth_headers
             )
 
         assert response.status_code == 503
+        assert response.json()["detail"]["error_code"] == "AI_VISION_DISABLED"
+        detect.assert_not_awaited()
+        limiter.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_unreachable_ai_is_502(
@@ -286,12 +362,37 @@ class TestDetectGarmentsEndpoint:
     ):
         item = await _make_item(db_session, test_user)
 
-        with patch("app.api.split.get_ai_service", return_value=_ai(error=RuntimeError("down"))):
+        with _detects(error=RuntimeError("down")):
             response = await client.post(
                 f"/api/v1/items/{item.id}/detect-garments", headers=auth_headers
             )
 
         assert response.status_code == 502
+        assert response.json()["detail"]["error_code"] == "AI_UNREACHABLE"
+
+    @pytest.mark.asyncio
+    async def test_uses_the_users_own_ai_endpoints(
+        self, client: AsyncClient, db_session: AsyncSession, test_user, auth_headers
+    ):
+        item = await _make_item(db_session, test_user)
+        db_session.add(
+            UserPreference(
+                user_id=test_user.id,
+                ai_endpoints=[
+                    {"url": "http://users-own-ai:11434/v1", "name": "mine", "enabled": True}
+                ],
+            )
+        )
+        await db_session.commit()
+
+        with patch.object(AIService, "detect_garments", autospec=True, return_value=[]) as detect:
+            response = await client.post(
+                f"/api/v1/items/{item.id}/detect-garments", headers=auth_headers
+            )
+
+        assert response.status_code == 200
+        [call] = detect.await_args_list
+        assert call.args[0]._endpoints[0].url == "http://users-own-ai:11434/v1"
 
     @pytest.mark.asyncio
     async def test_is_rate_limited(
@@ -299,7 +400,7 @@ class TestDetectGarmentsEndpoint:
     ):
         item = await _make_item(db_session, test_user)
 
-        with patch("app.api.split.get_ai_service", return_value=_ai([])):
+        with _detects([]):
             codes = [
                 (
                     await client.post(
@@ -448,21 +549,48 @@ class TestSplitEndpoint:
         assert len(new) == 2 and all(i.status == ItemStatus.ready for i in new)
 
     @pytest.mark.asyncio
-    async def test_redis_down_still_creates_the_items(
-        self, client: AsyncClient, db_session: AsyncSession, test_user, auth_headers
+    @pytest.mark.parametrize(
+        ("pool_error", "enqueue_errors", "expected_jobs"),
+        [
+            (ConnectionError, [], [None, None]),
+            (None, [None, ConnectionError, None], ["job-1", None, "job-1"]),
+        ],
+        ids=["redis-down", "one-enqueue-fails"],
+    )
+    async def test_a_queueing_failure_still_creates_the_items(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        test_user,
+        auth_headers,
+        pool_error,
+        enqueue_errors,
+        expected_jobs,
     ):
         source = await _make_item(db_session, test_user)
+        redis = _redis()
+        job = redis.enqueue_job.return_value
+        redis.enqueue_job.side_effect = [error or job for error in enqueue_errors] or None
+        boxes = [{"left": 0.3 * i, "top": 0.1, "width": 0.25, "height": 0.5} for i in range(3)]
 
         with (
             patch("app.api.split.settings", _vision(True)),
-            patch("app.api.split.create_pool", AsyncMock(side_effect=ConnectionError)),
+            patch(
+                "app.api.split.create_pool", AsyncMock(side_effect=pool_error, return_value=redis)
+            ),
         ):
             response = await client.post(
-                f"/api/v1/items/{source.id}/split", json={"boxes": BOXES}, headers=auth_headers
+                f"/api/v1/items/{source.id}/split",
+                json={"boxes": boxes[: len(expected_jobs)]},
+                headers=auth_headers,
             )
 
         assert response.status_code == 201
-        assert len(response.json()["item_ids"]) == 2
+        ids = response.json()["item_ids"]
+        assert redis.enqueue_job.await_count == len(enqueue_errors)
+        by_id = {str(i.id): i for i in await _all_items(db_session, test_user)}
+        assert [by_id[i].ai_job_id for i in ids] == expected_jobs
+        assert all(by_id[i].status == ItemStatus.processing for i in ids)
 
     @pytest.mark.asyncio
     async def test_a_failure_part_way_creates_nothing_and_removes_the_files(
@@ -526,16 +654,93 @@ class TestSplitEndpoint:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_an_archived_source_is_409(
-        self, client: AsyncClient, db_session: AsyncSession, test_user, auth_headers
+    @pytest.mark.parametrize(
+        ("state", "expected_status", "error_code"),
+        [
+            ({"is_archived": True, "status": ItemStatus.archived}, 409, "SOURCE_ARCHIVED"),
+            ({"status": ItemStatus.processing, "processing_kind": "rotate"}, 409, "SOURCE_BUSY"),
+            (
+                {"status": ItemStatus.processing, "processing_kind": "background_removal"},
+                409,
+                "SOURCE_BUSY",
+            ),
+            ({"status": ItemStatus.processing, "processing_kind": None}, 201, None),
+        ],
+        ids=["archived", "rotating", "removing-background", "being-tagged"],
+    )
+    async def test_the_sources_state_decides_whether_it_can_be_split(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        test_user,
+        auth_headers,
+        state,
+        expected_status,
+        error_code,
     ):
-        source = await _make_item(db_session, test_user, is_archived=True)
+        source = await _make_item(db_session, test_user, **state)
 
-        response = await client.post(
-            f"/api/v1/items/{source.id}/split", json={"boxes": BOXES}, headers=auth_headers
-        )
+        with patch("app.api.split.settings", _vision(False)):
+            response = await client.post(
+                f"/api/v1/items/{source.id}/split", json={"boxes": BOXES}, headers=auth_headers
+            )
 
-        assert response.status_code == 409
+        assert response.status_code == expected_status
+        if error_code is not None:
+            assert response.json()["detail"]["error_code"] == error_code
+            assert len(await _all_items(db_session, test_user)) == 1
+
+    @pytest.mark.asyncio
+    async def test_two_splits_at_once_make_one_set_of_items(
+        self, client: AsyncClient, db_session: AsyncSession, session_maker, test_user, auth_headers
+    ):
+        # The `client` fixture puts every request on one shared session, which cannot show
+        # row-lock contention, so each request here gets a connection of its own.
+        source = await _make_item(db_session, test_user)
+
+        async def own_session():
+            async with session_maker() as session:
+                yield session
+
+        app.dependency_overrides[get_db] = own_session
+        with patch("app.api.split.settings", _vision(False)):
+            responses = await asyncio.gather(
+                *(
+                    client.post(
+                        f"/api/v1/items/{source.id}/split",
+                        json={"boxes": BOXES},
+                        headers=auth_headers,
+                    )
+                    for _ in range(2)
+                )
+            )
+
+        assert sorted(r.status_code for r in responses) == [201, 409]
+        [refused] = [r for r in responses if r.status_code == 409]
+        assert refused.json()["detail"]["error_code"] == "SOURCE_ARCHIVED"
+        items = await _all_items(db_session, test_user)
+        assert len([i for i in items if not i.is_archived]) == len(BOXES)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("action", "body"), [("detect-garments", None), ("split", {"boxes": BOXES})]
+    )
+    async def test_a_missing_photo_file_is_404_without_leaking_the_path(
+        self, client: AsyncClient, db_session: AsyncSession, test_user, auth_headers, action, body
+    ):
+        source = await _make_item(db_session, test_user)
+        (ImageService().storage_path / source.image_path).unlink()
+
+        with patch("app.api.split.settings", _vision(False)), _detects([]) as detect:
+            response = await client.post(
+                f"/api/v1/items/{source.id}/{action}", json=body, headers=auth_headers
+            )
+
+        assert response.status_code == 404
+        assert response.json()["detail"]["error_code"] == "IMAGE_NOT_FOUND"
+        assert source.image_path not in response.text
+        detect.assert_not_awaited()
+        assert len(await _all_items(db_session, test_user)) == 1
 
     @pytest.mark.asyncio
     async def test_unknown_item_is_404(self, client: AsyncClient, auth_headers):
@@ -550,3 +755,38 @@ class TestSplitEndpoint:
         response = await client.post(f"/api/v1/items/{uuid4()}/split", json={"boxes": BOXES})
 
         assert response.status_code in (401, 403)
+
+
+class TestArchivedWhileAnalysing:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "status_when_job_lands",
+        [ItemStatus.archived, ItemStatus.processing],
+        ids=["split-while-tagging", "re-analysed-while-archived"],
+    )
+    async def test_an_archived_item_stays_archived_after_its_analysis(
+        self, db_session: AsyncSession, test_user, status_when_job_lands
+    ):
+        item = await _make_item(
+            db_session, test_user, is_archived=True, status=status_when_job_lands
+        )
+        item_id = item.id
+
+        class _StubAI:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def analyze_image(self, path, locale="en"):
+                return ClothingTags(type="shirt", primary_color="blue", colors=["blue"])
+
+        with (
+            patch.object(tagging, "AIService", _StubAI),
+            patch("app.workers.tagging.get_db_session", return_value=db_session),
+            patch.object(db_session, "close", new_callable=AsyncMock),
+        ):
+            result = await tagging.tag_item_image({}, str(item_id), __file__)
+
+        assert result["status"] == "success"
+        [done] = [i for i in await _all_items(db_session, test_user) if i.id == item_id]
+        assert done.status == ItemStatus.archived
+        assert done.primary_color == "blue"

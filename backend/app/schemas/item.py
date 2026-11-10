@@ -3,14 +3,13 @@ from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
-from app.models.item import ProcessingKind, TaggingStatus
+from app.models.item import ItemStatus, ProcessingKind, TaggingStatus
 from app.schemas.color import ColorList, ColorName
 from app.schemas.outfit import Occasion
 from app.utils.garment_vocabulary import DEFAULT_WASH_INTERVALS
 from app.utils.signed_urls import sign_image_url, sign_optional
-from app.utils.tag_validation import normalize_tag_edits
 
 
 class ItemTags(BaseModel):
@@ -65,17 +64,6 @@ class ItemUpdate(BaseModel):
     colors: ColorList | None = None
     primary_color: ColorName | None = None
     wash_interval: int | None = None
-
-    @field_validator("tags")
-    @classmethod
-    def _check_tag_vocabulary(cls, tags: ItemTags | None) -> ItemTags | None:
-        # Only the tags actually sent are checked and cleaned (see normalize_tag_edits).
-        if tags is not None:
-            edited = tags.model_dump(include=tags.model_fields_set)
-            for key, value in normalize_tag_edits(edited).items():
-                if value != edited[key]:
-                    setattr(tags, key, value)
-        return tags
 
 
 class ItemResponse(ItemBase):
@@ -222,16 +210,19 @@ class ItemListResponse(BaseModel):
     has_more: bool
 
 
-class ItemFilter(BaseModel):
+class ItemFilterFields(BaseModel):
     type: str | None = None
     subtype: str | None = None
     colors: ColorList | None = None
-    status: str | None = None
-    tagging_status: str | None = None
+    status: ItemStatus | None = None
+    tagging_status: TaggingStatus | None = None
     favorite: bool | None = None
     needs_wash: bool | None = None
     is_archived: bool = False
     search: str | None = None
+
+
+class ItemFilter(ItemFilterFields):
     sort_by: str | None = None
     sort_order: str = "desc"
 
@@ -268,13 +259,13 @@ class BulkUploadResponse(BaseModel):
     results: list[BulkUploadResult]
 
 
-class BulkFilters(BaseModel):
-    type: str | None = None
-    search: str | None = None
-    is_archived: bool | None = None
+class BulkFilters(ItemFilterFields):
+    model_config = ConfigDict(extra="forbid")
 
 
 class BulkSelectionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     # Explicit selection
     item_ids: list[UUID] | None = None
 
